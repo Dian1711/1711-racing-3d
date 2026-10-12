@@ -1037,10 +1037,15 @@ function buildTrackWorld(track){
   const sign=new THREE.Mesh(new THREE.BoxGeometry(.38,1.15,7.5),black);
   sign.position.set(x,10.5,z);sign.rotation.y=yaw;add(sign);
   // Tulisan dibuat sebagai papan kontras; papan besar tetap terbaca dari jarak jauh.
-  const labelBoard=new THREE.Mesh(new THREE.BoxGeometry(.28,1.1,8),white);
-  labelBoard.position.set(x,10.5,z);labelBoard.rotation.y=yaw;add(labelBoard);
-  const labelBar=new THREE.Mesh(new THREE.BoxGeometry(.34,.22,6.5),black);
-  labelBar.position.set(x,10.5,z);labelBar.rotation.y=yaw;add(labelBar);
+  const labelCanvas=document.createElement('canvas');
+  labelCanvas.width=512;labelCanvas.height=128;
+  const labelCtx=labelCanvas.getContext('2d');
+  labelCtx.fillStyle='#ffffff';labelCtx.fillRect(0,0,512,128);
+  labelCtx.fillStyle='#111111';labelCtx.font='bold 76px Arial';labelCtx.textAlign='center';labelCtx.textBaseline='middle';
+  labelCtx.fillText(x===START_LINE_X?'START':'FINISH',256,65);
+  const labelTexture=new THREE.CanvasTexture(labelCanvas);labelTexture.colorSpace=THREE.SRGBColorSpace;
+  const labelBoard=new THREE.Mesh(new THREE.PlaneGeometry(7.6,1.05),new THREE.MeshBasicMaterial({map:labelTexture,side:THREE.DoubleSide}));
+  labelBoard.position.set(x-.22,10.5,z);labelBoard.rotation.y=yaw;add(labelBoard);
   const tiles=[];
   for(let i=0;i<20;i++){
    const tile=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,1.3),(i%2===0?white:black));
@@ -1203,7 +1208,7 @@ function updatePlayer(dt){
   heading-=steeringInput*turnRate*dt*steeringResponse*reverseFactor;
  }
  // Arah mobil mengikuti tikungan sirkuit, sementara input setir tetap mengatur posisi di lintasan.
- const curveHeading=Math.atan(routeSlope(player.position.x,trackOptions[selectedTrack]));
+ const curveHeading=Math.atan2(1,routeSlope(player.position.x,trackOptions[selectedTrack]));
  heading+=angleDifference(curveHeading,heading)*Math.min(1,dt*(1.2+speedFraction*1.2));
  // Body roll ringan dan lembut mengikuti setir yang sudah dihaluskan.
  const targetRoll=-steeringInput*speedFraction*0.035;
