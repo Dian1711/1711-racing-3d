@@ -50,6 +50,7 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
  .stats{gap:3px}
  .stat strong{font-size:15px}
  .stat span{font-size:8px}
+ .stats .stat{min-width:48px}
  #speed{font-size:18px}
  .ctrl{width:45px;height:50px}
  .ctrl.pedal{width:52px;height:69px;padding-bottom:9px}
@@ -76,7 +77,8 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
     </div>
     <div class="stats">
       <div class="panel stat"><strong id="position">4/4</strong><span>POSISI</span></div>
-      <div class="panel stat"><strong id="lap">0%</strong><span>MENUJU FINISH</span></div>
+      <div class="panel stat"><strong id="lap">0%</strong><span>PROGRES</span></div>
+      <div class="panel stat"><strong id="remaining">7.6</strong><span>SISA KM</span></div>
       <div class="panel stat"><strong id="speed">0</strong><span>KM/J</span></div>
     </div>
   </div>
@@ -853,9 +855,38 @@ const NITRO_SPEED=400/2.25; // sekitar 400 km/jam dengan nitro
 const MAX_REVERSE=12;
 const message=document.getElementById('message');
 
+function prepareTrackDistance(track){
+ const count=Math.ceil(track.distance/10);
+ const table=[{x:START_LINE_X,d:0}];
+ let previousX=START_LINE_X,previousZ=routeCenter(START_LINE_X,track),distance=0;
+ for(let i=1;i<=count;i++){
+  const x=START_LINE_X+track.distance*i/count;
+  const z=routeCenter(x,track);
+  distance+=Math.hypot(x-previousX,z-previousZ);
+  table.push({x,d:distance});
+  previousX=x;previousZ=z;
+ }
+ track.arcTable=table;track.arcLength=distance;
+}
+function trackDistanceAtX(x,track){
+ const table=track.arcTable;
+ if(!table)return THREE.MathUtils.clamp(x-START_LINE_X,0,track.distance);
+ if(x<=START_LINE_X)return 0;
+ if(x>=finishLineX)return track.arcLength;
+ let lo=0,hi=table.length-1;
+ while(hi-lo>1){
+  const mid=(lo+hi)>>1;
+  if(table[mid].x<x)lo=mid;else hi=mid;
+ }
+ const a=table[lo],b=table[hi],t=(x-a.x)/(b.x-a.x||1);
+ return a.d+(b.d-a.d)*t;
+}
 function updateHUD(){
- const progress=Math.max(0,Math.min(100,((player.position.x-START_LINE_X)/(finishLineX-START_LINE_X))*100));
- document.getElementById('lap').textContent=Math.floor(progress)+'%';
+ const track=trackOptions[selectedTrack];
+ const traveled=trackDistanceAtX(player.position.x,track);
+ const progress=THREE.MathUtils.clamp(traveled/(track.arcLength||track.distance),0,1);
+ document.getElementById('lap').textContent=Math.floor(progress*100)+'%';
+ document.getElementById('remaining').textContent=(track.distance*(1-progress)/1000).toFixed(2);
  document.getElementById('speed').textContent=Math.round(Math.abs(speed)*1.55);
  document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
  document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
@@ -1207,6 +1238,7 @@ function startGame(){
  if(carPicker)applyCarChoice(carPicker.value);
  const track=trackOptions[selectedTrack];
  finishLineX=START_LINE_X+track.distance;
+ prepareTrackDistance(track);
  scene.background.setHex(track.sky);scene.fog.color.setHex(track.sky);
  buildTrackWorld(track);
  document.querySelector('.brand').innerHTML='1711 <span>RACING</span>';
