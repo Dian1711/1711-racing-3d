@@ -1,0 +1,64 @@
+name: Build Teteng Racing APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout game
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+        continue-on-error: true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Prepare web app
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+          npm init -y
+          npm install @capacitor/core@6.2.1 @capacitor/cli@6.2.1 @capacitor/android@6.2.1
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.dian1711.tetengracing",
+            "appName": "Teteng Racing",
+            "webDir": "www",
+            "bundledWebRuntime": false
+          }
+          EOF
+          npx cap add android
+          npx cap sync android
+          perl -0pi -e 's/(<activity\\b[^>]*android:name="\\.MainActivity")/$1 android:screenOrientation="landscape"/' android/app/src/main/AndroidManifest.xml
+          chmod +x android/gradlew
+
+      - name: Build debug APK
+        run: ./android/gradlew -p android assembleDebug --no-daemon
+
+      - name: Upload APK for phone testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: teteng-racing-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
