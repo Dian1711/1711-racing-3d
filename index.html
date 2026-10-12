@@ -42,6 +42,8 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
  #speed{font-size:18px}
  .ctrl{width:45px;height:50px}
  #controls{padding:0 7px;bottom:19px}
+ #nitroWrap{top:66px;right:7px;width:95px}
+ .ctrl.nitro{font-size:10px}
  #message{top:22%;padding:15px}
 }
 </style>
@@ -64,9 +66,10 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
     <h1>1711 RACING 3D</h1>
     <p>Kalahkan 3 pembalap AI! Selesaikan 3 putaran dan jadilah yang pertama mencapai garis finis.</p>
     <button id="start">MULAI BALAPAN</button>
-    <p>W / ↑ Gas · S Mundur · ↓ Rem · A/D atau ←/→ Belok</p>
+    <p>W / ↑ Gas · S Mundur · ↓ Rem · A/D Belok · Shift / X Nitro · Space Drift</p>
   </div>
 
+  <div id="nitroWrap"><div id="nitroLabel">⚡ NITRO <span id="nitroPct">100%</span></div><div id="nitroTrack"><div id="nitroFill"></div></div></div>
   <div id="controls">
     <div class="controlgroup">
       <button class="ctrl" data-control="left">◀</button>
@@ -75,6 +78,8 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
     <div class="controlgroup">
       <button class="ctrl reverse" data-control="reverse">MUNDUR</button>
       <button class="ctrl brake" data-control="brake">REM</button>
+      <button class="ctrl brake" data-control="drift">DRIFT</button>
+      <button class="ctrl nitro" data-control="nitro">NITRO</button>
       <button class="ctrl gas" data-control="gas">▲</button>
     </div>
   </div>
@@ -107,6 +112,7 @@ const whiteMat=mat(0xffffff);
 const redMat=mat(0xf3442e);
 const darkMat=mat(0x20252b);
 const glassMat=mat(0x8fc8df,.35);
+const nitroGlowMat=new THREE.MeshBasicMaterial({color:0x33c8ff,transparent:true,opacity:.9});
 
 const RX=92,RZ=62,ROAD=17,SEG=260,TAU=Math.PI*2;
 
@@ -346,6 +352,14 @@ function createCar(color){
    w.position.set(x,.43,z);g.add(w);wheels.push(w);
   }
  }
+ // Knalpot dan api nitro biru.
+ const nitroFlames=[];
+ for(const x of [-.55,.55]){
+  const exhaust=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,.18,8),darkPaint);
+  exhaust.rotation.x=Math.PI/2;exhaust.position.set(x,.52,1.99);g.add(exhaust);
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.13,.7,8),nitroGlowMat);
+  flame.rotation.x=-Math.PI/2;flame.position.set(x,.52,2.32);flame.visible=false;g.add(flame);nitroFlames.push(flame);
+ }
  // Garis dekorasi pada kap mesin.
  const stripeMat=new THREE.MeshBasicMaterial({color:0xffffff});
  for(const x of [-.38,.38]){
@@ -353,6 +367,7 @@ function createCar(color){
   stripe.position.set(x,1.055,-1.25);g.add(stripe);
  }
  g.userData.wheels=wheels;
+ g.userData.nitroFlames=nitroFlames;
  scene.add(g);
  return g;
 }
@@ -376,13 +391,15 @@ const ai=[
  {car:createCar(0xeeeeee),progress:.37,speed:.32,lane:3,targetLane:3,finished:false,name:'Putih'}
 ];
 
-const keys={left:false,right:false,gas:false,brake:false,reverse:false};
+const keys={left:false,right:false,gas:false,brake:false,reverse:false,nitro:false,drift:false};
+let nitro=100,nitroActive=false;
 let running=false,playerFinished=false,raceOver=false;
 let speed=0,heading=Math.PI/2;
 let playerProgress=0,lastAngle=0,elapsed=0;
 const TOTAL_LAPS=3;
 const FINISH_PROGRESS=TOTAL_LAPS*TAU;
 const MAX_SPEED=42;
+const NITRO_SPEED=57;
 const MAX_REVERSE=12;
 const message=document.getElementById('message');
 
@@ -390,6 +407,8 @@ function updateHUD(){
  document.getElementById('lap').textContent=
   Math.min(TOTAL_LAPS,Math.floor(playerProgress/TAU)+1)+'/'+TOTAL_LAPS;
  document.getElementById('speed').textContent=Math.round(Math.abs(speed)*4.2);
+ document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
+ document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
 
  const ranks=[
   {name:'Kamu',progress:playerProgress,isPlayer:true},
@@ -419,6 +438,7 @@ function finishRace(winner){
 
 function startGame(){
  speed=0;
+ nitro=100;nitroActive=false;
  heading=Math.PI/2;
  playerProgress=0;
  lastAngle=0;
@@ -480,6 +500,8 @@ addEventListener('keydown',e=>{
  if(k==='s')keys.reverse=true;
  if(k==='arrowleft'||k==='a')keys.left=true;
  if(k==='arrowright'||k==='d')keys.right=true;
+ if(k==='shift'||k==='x')keys.nitro=true;
+ if(k===' ')keys.drift=true;
 });
 
 addEventListener('keyup',e=>{
@@ -490,6 +512,8 @@ addEventListener('keyup',e=>{
  if(k==='s')keys.reverse=false;
  if(k==='arrowleft'||k==='a')keys.left=false;
  if(k==='arrowright'||k==='d')keys.right=false;
+ if(k==='shift'||k==='x')keys.nitro=false;
+ if(k===' ')keys.drift=false;
 });
 
 addEventListener('blur',()=>{
@@ -512,7 +536,11 @@ function updatePlayer(dt){
   else if(speed<0)speed=Math.min(0,speed+30*dt);
  }
 
- speed=THREE.MathUtils.clamp(speed,-MAX_REVERSE,MAX_SPEED);
+ nitroActive=keys.nitro&&keys.gas&&nitro>0&&speed>2;
+ if(nitroActive){nitro=Math.max(0,nitro-30*dt);speed+=30*dt;}
+ else nitro=Math.min(100,nitro+8*dt);
+ speed=THREE.MathUtils.clamp(speed,-MAX_REVERSE,nitroActive?NITRO_SPEED:MAX_SPEED);
+ player.userData.nitroFlames.forEach(f=>{f.visible=nitroActive; if(nitroActive)f.scale.setScalar(.75+Math.random()*.7);});
 
  const steering=(keys.right?1:0)-(keys.left?1:0);
  if(Math.abs(speed)>.3){
@@ -523,6 +551,9 @@ function updatePlayer(dt){
  player.rotation.y=heading+Math.PI;
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*.6);
+
+ // Sedikit kehilangan traksi saat drift.
+ if(keys.drift&&Math.abs(speed)>10){speed*=Math.exp(-.12*dt);}
 
  // Perlambat saat keluar lintasan.
  const dist=trackDistance(player.position);
