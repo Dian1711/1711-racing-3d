@@ -332,14 +332,37 @@ function createCar(color){
  };
  // Formula-style low monocoque chassis, with the pointed nose facing local -Z.
  add(new THREE.BoxGeometry(1.05,.30,2.65),paint,[0,.48,.02]);
- // Nose lebih panjang dan meruncing tajam ke arah depan.
- add(new THREE.BoxGeometry(.66,.20,1.82),paint,[0,.48,-1.48]);
- add(new THREE.ConeGeometry(.34,1.38,4),paint,[0,.49,-2.56],null,[-Math.PI/2,0,Math.PI/4]);
- add(new THREE.BoxGeometry(2.38,.10,.36),dark,[0,.31,-2.48]);
- add(new THREE.BoxGeometry(2.20,.045,.23),paint,[0,.375,-2.48]);
- // Ujung sayap depan dengan endplate tegak.
+ // Hidung panjang berbentuk baji, dibuat dari penampang simetris kiri-kanan.
+ // Semua penampang memakai sumbu tengah yang sama agar ujung tidak miring.
+ const noseSections=[
+  {z:-.55,w:.39,b:.37,t:.62},
+  {z:-1.45,w:.34,b:.37,t:.60},
+  {z:-2.35,w:.20,b:.40,t:.55},
+  {z:-3.22,w:.018,b:.475,t:.49}
+ ];
+ const noseVertices=[],noseIndices=[];
+ for(const s of noseSections){
+  noseVertices.push(-s.w,s.b,s.z, s.w,s.b,s.z, -s.w,s.t,s.z, s.w,s.t,s.z);
+ }
+ for(let i=0;i<noseSections.length-1;i++){
+  const a=i*4,b=a+4;
+  // sisi kiri, sisi kanan, permukaan atas dan bawah; pola identik di kedua sisi.
+  noseIndices.push(a,a+2,b, a+2,b+2,b);
+  noseIndices.push(a+1,b+1,a+3, a+3,b+1,b+3);
+  noseIndices.push(a+2,a+3,b+2, a+3,b+3,b+2);
+  noseIndices.push(a,b,a+1, a+1,b,a+1+4);
+ }
+ const noseGeo=new THREE.BufferGeometry();
+ noseGeo.setAttribute('position',new THREE.Float32BufferAttribute(noseVertices,3));
+ noseGeo.setIndex(noseIndices);noseGeo.computeVertexNormals();
+ add(noseGeo,paint,[0,0,0]);
+ // Lapisan atas yang menyambung ke monocoque tanpa mengubah garis tengah.
+ add(new THREE.BoxGeometry(.78,.16,1.22),paint,[0,.49,-.82]);
+ add(new THREE.BoxGeometry(2.38,.10,.36),dark,[0,.31,-3.00]);
+ add(new THREE.BoxGeometry(2.20,.045,.23),paint,[0,.375,-3.00]);
+ // Endplate sayap depan dibuat berpasangan dengan jarak yang sama dari garis tengah.
  for(const x of [-1.08,1.08]){
-  add(new THREE.BoxGeometry(.07,.23,.30),paint,[x,.43,-2.48]);
+  add(new THREE.BoxGeometry(.07,.23,.30),paint,[x,.43,-3.00]);
  }
  // Side pods and aerodynamic floor.
  for(const x of [-.72,.72]){
@@ -740,6 +763,7 @@ let speed=0,heading=Math.PI/2;
 let steeringInput=0;
 let playerProgress=0,lastAngle=0,elapsed=0;
 let collisionCooldown=0;
+let edgeCollisionCooldown=0;
 const TOTAL_LAPS=3;
 const FINISH_PROGRESS=TOTAL_LAPS*TAU;
 const MAX_SPEED=300/2.25; // 300 km/jam tanpa nitro
@@ -1034,22 +1058,28 @@ function updatePlayer(dt){
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*1.15);
 
 
- // Benturan tepi jalan dibuat singkat: satu koreksi arah, tanpa pantulan bolak-balik.
- const safeEdge=11.55;
+ // Tepi jalan: tahan mobil di dekat tepi, kurangi laju secara bertahap,
+ // dan arahkan hidung ke dalam tanpa pantulan tajam ke tengah jalan.
+ edgeCollisionCooldown=Math.max(0,edgeCollisionCooldown-dt);
+ const safeEdge=11.35;
  if(player.position.z>safeEdge){
-  player.position.z=safeEdge-.12;
-  if(speed*Math.cos(heading)>0) heading=-Math.PI-heading;
-  speed*=.38;
-  steeringInput*=.10;
-  nitroActive=false;keys.nitro=false;
-  player.rotation.z=0;
+  player.position.z=safeEdge;
+  if(speed*Math.cos(heading)>0 && edgeCollisionCooldown<=0){
+   heading=Math.atan2(Math.sin(heading),-Math.max(.18,Math.abs(Math.cos(heading))));
+   speed*=.88;
+   steeringInput*=.35;
+   edgeCollisionCooldown=.28;
+   nitroActive=false;keys.nitro=false;
+  }
  }else if(player.position.z< -safeEdge){
-  player.position.z=-safeEdge+.12;
-  if(speed*Math.cos(heading)<0) heading=Math.PI-heading;
-  speed*=.68;
-  steeringInput*=.25;
-  nitroActive=false;keys.nitro=false;
-  player.rotation.z=0;
+  player.position.z=-safeEdge;
+  if(speed*Math.cos(heading)<0 && edgeCollisionCooldown<=0){
+   heading=Math.atan2(Math.sin(heading),Math.max(.18,Math.abs(Math.cos(heading))));
+   speed*=.88;
+   steeringInput*=.35;
+   edgeCollisionCooldown=.28;
+   nitroActive=false;keys.nitro=false;
+  }
  }
 
  // Mode sirkuit kota: uji akselerasi tetap aktif, AI masih nonaktif.
@@ -1139,11 +1169,15 @@ function animate(){
   -Math.cos(heading)*cameraDistance
  );
  const target=player.position.clone().add(behind);
- // Kamera mengikuti posisi mobil langsung dengan jarak dan sudut tetap; tidak tertinggal saat akselerasi.
- camera.position.copy(target);
+ // Kamera mengikuti dengan peredaman kecil supaya koreksi tepi tidak membuat layar tersentak.
+ const cameraSmooth=1-Math.exp(-dt*7.5);
+ camera.position.lerp(target,cameraSmooth);
+ const lookTarget=player.position.clone().add(new THREE.Vector3(0,.92,0));
+ if(!animate.cameraLook)animate.cameraLook=lookTarget.clone();
+ animate.cameraLook.lerp(lookTarget,1-Math.exp(-dt*9));
  camera.fov=68;
  camera.updateProjectionMatrix();
- camera.lookAt(player.position.x,player.position.y+.92,player.position.z);
+ camera.lookAt(animate.cameraLook);
  renderer.render(scene,camera);
 }
 
