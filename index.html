@@ -542,7 +542,52 @@ for(let x=-1080;x<=1080;x+=34){
   makeBuilding(x+(Math.random()-.5)*10,side,buildingIndex++);
  }
 }
-// Lampu jalan kota di antara tembok dan gedung.
+// Pedagang kaki lima dengan gerobak dan kanopi di sisi trotoar.
+const stallColors=[0xe84a36,0x2877b9,0xe5b83f,0x31845b];
+function makeVendorStall(x,side,index){
+ const z=side*18.1,g=new THREE.Group();g.position.set(x,0,z);
+ const color=mat(stallColors[index%stallColors.length]),wood=mat(0x755039);
+ const counter=new THREE.Mesh(new THREE.BoxGeometry(2.7,1,1),wood);counter.position.y=.7;g.add(counter);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(3.1,.16,1.4),color);roof.position.y=2.15;g.add(roof);
+ for(const dx of [-1.35,1.35])for(const dz of [-.58,.58]){
+  const post=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,2.05,7),darkMat);post.position.set(dx,1.05,dz);g.add(post);
+ }
+ for(let j=0;j<4;j++){
+  const item=new THREE.Mesh(new THREE.SphereGeometry(.15,9,7),mat([0xffb52e,0xd83b32,0x58a94e,0xf3dfb5][j]));
+  item.position.set(-.8+j*.5,1.28,-.12);g.add(item);
+ }
+ const sign=new THREE.Mesh(new THREE.BoxGeometry(1.5,.32,.08),whiteMat);sign.position.set(0,1.8,-.72);g.add(sign);
+ scene.add(g);
+}
+for(let x=-1000,index=0;x<1000;x+=145,index++){
+ for(const side of [-1,1])makeVendorStall(x+(side===1?24:0),side,index+(side===1?1:0));
+}
+
+// Warga berdiri di trotoar menonton balapan, beberapa mengangkat tangan atau ponsel.
+const crowdShirts=[0xe84b3c,0x287bc1,0xe8c34d,0x3b8a5c,0xf0eee7,0x754ca3].map(mat);
+const crowdSkin=[0xb9774f,0x8f5a3b,0xd49a70,0x70462f].map(mat);
+function makeSpectator(x,side,index){
+ const g=new THREE.Group();g.position.set(x,0,side*(17.1+Math.random()*1.5));
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(.20,.25,.78,8),crowdShirts[index%crowdShirts.length]);body.position.y=1.0;g.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),crowdSkin[index%crowdSkin.length]);head.position.y=1.53;g.add(head);
+ for(const dx of [-.11,.11]){
+  const leg=new THREE.Mesh(new THREE.CylinderGeometry(.065,.08,.45,7),darkMat);leg.position.set(dx,.32,0);g.add(leg);
+ }
+ for(const armSide of [-1,1]){
+  const arm=new THREE.Mesh(new THREE.CylinderGeometry(.05,.065,.43,7),crowdSkin[index%crowdSkin.length]);
+  arm.position.set(armSide*.27,1.05,0);arm.rotation.z=armSide*.35;g.add(arm);
+ }
+ if(index%5===0){
+  const arm=g.children[g.children.length-1];arm.rotation.z=-.9;arm.position.y=1.22;
+  const phone=new THREE.Mesh(new THREE.BoxGeometry(.07,.13,.035),darkMat);phone.position.set(-.44,1.42,0);g.add(phone);
+ }
+ scene.add(g);
+}
+for(let x=-1070,index=0;x<1080;x+=8,index++){
+ for(const side of [-1,1])if(Math.random()>.2)makeSpectator(x+(Math.random()-.5)*2,side,index+(side===1?2:0));
+}
+
+// Lampu jalan di trotoar terbuka.
 for(let x=-1060;x<=1060;x+=48){
  for(const side of [-1,1]){
   const z=side*16.2;
