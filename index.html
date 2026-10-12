@@ -447,8 +447,8 @@ let playerProgress=0,lastAngle=0,elapsed=0;
 let collisionCooldown=0;
 const TOTAL_LAPS=3;
 const FINISH_PROGRESS=TOTAL_LAPS*TAU;
-const MAX_SPEED=300/1.7; // 300 km/jam tanpa nitro
-const NITRO_SPEED=400/1.7; // sekitar 400 km/jam dengan nitro
+const MAX_SPEED=300/2.25; // 300 km/jam tanpa nitro
+const NITRO_SPEED=400/2.25; // sekitar 400 km/jam dengan nitro
 const MAX_REVERSE=12;
 const message=document.getElementById('message');
 
@@ -693,18 +693,18 @@ function updatePlayer(dt){
  // Gas dan mundur tidak aktif bersamaan.
  if(keys.gas&&!keys.reverse){
   // Di bawah 60 km/jam, kenaikan lebih halus dan lambat; setelah itu akselerasi tetap bertahap.
-  const lowSpeedFactor=Math.abs(speed)<(60/1.7)?0.55:1;
-  speed+=1.25*lowSpeedFactor*dt;
+  const lowSpeedFactor=Math.abs(speed)<(60/2.25)?0.72:1;
+  speed+=2.1*lowSpeedFactor*dt;
  }else if(keys.reverse&&!keys.gas){
   speed-=12*dt;
  }else if(!keys.brake){
-  speed*=Math.exp(-.045*dt);
+  speed*=Math.exp(-.075*dt);
  }
 
  // Rem memperlambat kecepatan menuju nol, bukan langsung mundur.
  if(keys.brake){
-  if(speed>0)speed=Math.max(0,speed-4*dt);
-  else if(speed<0)speed=Math.min(0,speed+4*dt);
+  if(speed>0)speed=Math.max(0,speed-7*dt);
+  else if(speed<0)speed=Math.min(0,speed+7*dt);
  }
 
  nitroActive=keys.nitro&&keys.gas&&nitro>0&&speed>2;
@@ -817,17 +817,17 @@ function animate(){
  updateSound(dt);
 
  const speedRatio=Math.min(1,Math.abs(speed)/MAX_SPEED);
- const cameraDistance=4.2+speedRatio*.9+(nitroActive?.35:0);
+ const cameraDistance=4.8+speedRatio*1.2+(nitroActive?.5:0);
  const behind=new THREE.Vector3(
   -Math.sin(heading)*cameraDistance,
-  2.6+speedRatio*.5,
+  3.0+speedRatio*.65,
   -Math.cos(heading)*cameraDistance
  );
  const target=player.position.clone().add(behind);
- camera.position.lerp(target,.24+speedRatio*.12);
- camera.fov=72+speedRatio*9+(nitroActive?4:0);
+ camera.position.lerp(target,.20+speedRatio*.12);
+ camera.fov=72+speedRatio*15+(nitroActive?7:0);
  camera.updateProjectionMatrix();
- const shake=speedRatio*.025+(nitroActive?.035:0);
+ const shake=speedRatio*.045+(nitroActive?.06:0);
  camera.position.y+=Math.sin(performance.now()*.035)*shake;
  camera.lookAt(player.position.x,player.position.y+1.2,player.position.z);
  renderer.render(scene,camera);
