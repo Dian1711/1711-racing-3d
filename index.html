@@ -428,6 +428,67 @@ function updateHUD(){
   (ranks.findIndex(r=>r.isPlayer)+1)+'/4';
 }
 
+// Suara mesin sintetis ringan; audio baru aktif setelah tombol mulai ditekan.
+let audioContext=null,engineOsc=null,engineOsc2=null,nitroOsc=null;
+let engineGain=null,engineGain2=null,nitroGain=null,engineFilter=null;
+
+function initAudio(){
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  if(!AudioCtx)return;
+  if(!audioContext){
+   audioContext=new AudioCtx();
+   engineFilter=audioContext.createBiquadFilter();
+   engineFilter.type='lowpass';
+   engineFilter.frequency.value=850;
+   engineGain=audioContext.createGain();
+   engineGain.gain.value=0;
+   engineOsc=audioContext.createOscillator();
+   engineOsc.type='sawtooth';
+   engineOsc.frequency.value=55;
+   engineOsc.connect(engineFilter);
+   engineFilter.connect(engineGain);
+   engineGain.connect(audioContext.destination);
+   engineOsc.start();
+
+   engineGain2=audioContext.createGain();
+   engineGain2.gain.value=0;
+   engineOsc2=audioContext.createOscillator();
+   engineOsc2.type='triangle';
+   engineOsc2.frequency.value=82;
+   engineOsc2.connect(engineGain2);
+   engineGain2.connect(audioContext.destination);
+   engineOsc2.start();
+
+   nitroGain=audioContext.createGain();
+   nitroGain.gain.value=0;
+   nitroOsc=audioContext.createOscillator();
+   nitroOsc.type='sine';
+   nitroOsc.frequency.value=180;
+   nitroOsc.connect(nitroGain);
+   nitroGain.connect(audioContext.destination);
+   nitroOsc.start();
+  }
+  if(audioContext.state==='suspended')audioContext.resume();
+ }catch(err){
+  // Game tetap berjalan bila browser tidak mendukung audio.
+ }
+}
+
+function updateSound(){
+ if(!audioContext||!engineOsc||audioContext.state!=='running')return;
+ const now=audioContext.currentTime;
+ const moving=running?Math.min(1,Math.abs(speed)/MAX_SPEED):0;
+ const targetFreq=48+Math.min(1,Math.abs(speed)/MAX_SPEED)*105+(keys.gas?14:0);
+ engineOsc.frequency.setTargetAtTime(targetFreq,now,.08);
+ engineOsc2.frequency.setTargetAtTime(targetFreq*1.48,now,.1);
+ engineFilter.frequency.setTargetAtTime(450+moving*1250,now,.12);
+ engineGain.gain.setTargetAtTime(running?.018+moving*.025:0,now,.12);
+ engineGain2.gain.setTargetAtTime(running?.006+moving*.008:0,now,.12);
+ nitroOsc.frequency.setTargetAtTime(180+moving*220,now,.05);
+ nitroGain.gain.setTargetAtTime(running&&nitroActive?.022:0,now,.06);
+}
+
 function finishRace(winner){
  if(raceOver)return;
  raceOver=true;
@@ -446,6 +507,7 @@ function finishRace(winner){
 }
 
 function startGame(){
+ initAudio();
  speed=0;
  nitro=100;nitroActive=false;
  heading=Math.PI/2;
@@ -657,6 +719,7 @@ function animate(){
  requestAnimationFrame(animate);
  const dt=Math.min(clock.getDelta(),.04);
  update(dt);
+ updateSound();
 
  const behind=new THREE.Vector3(
   -Math.sin(heading)*10,
