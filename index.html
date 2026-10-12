@@ -1036,9 +1036,10 @@ function updateSound(dt=1/60){
  if(!audioContext||!engineOsc||audioContext.state!=='running')return;
  const now=audioContext.currentTime;
  const speedRatio=Math.min(1,Math.abs(speed)/MAX_SPEED);
- const throttle=running&&keys.gas&&!keys.reverse;
+ const active=running&&!paused;
+ const throttle=active&&keys.gas&&!keys.reverse;
  // RPM mengikuti kecepatan aktual; throttle memberi sedikit raungan ekstra saat akselerasi.
- const rpmTarget=running?Math.min(1,(speedRatio*.82)+(throttle?.18:0)+(nitroActive?.12:0)):0;
+ const rpmTarget=active?Math.min(1,(speedRatio*.82)+(throttle?.18:0)+(nitroActive?.12:0)):0;
  engineRPM+=(rpmTarget-engineRPM)*(1-Math.exp(-dt*(throttle?1.35:1.8)));
  const rpm=.05+engineRPM*.95;
  const baseFreq=35+rpm*128+(nitroActive?12:0);
@@ -1047,11 +1048,11 @@ function updateSound(dt=1/60){
  engineOsc2.frequency.setTargetAtTime(baseFreq*1.36,now,.14);
  engineOsc3.frequency.setTargetAtTime(baseFreq*1.92,now,.15);
  engineFilter.frequency.setTargetAtTime(300+rpm*1450,now,.15);
- engineGain.gain.setTargetAtTime(running?.026+rpm*.052:0,now,.15);
- engineGain2.gain.setTargetAtTime(running?.018+rpm*.028:0,now,.16);
- engineGain3.gain.setTargetAtTime(running?.003+rpm*.012:0,now,.16);
+ engineGain.gain.setTargetAtTime(active?.026+rpm*.052:0,now,.15);
+ engineGain2.gain.setTargetAtTime(active?.018+rpm*.028:0,now,.16);
+ engineGain3.gain.setTargetAtTime(active?.003+rpm*.012:0,now,.16);
 
- const rocket=running&&nitroActive;
+ const rocket=active&&nitroActive;
  if(rocket)nitroRocketPitch=Math.min(1,nitroRocketPitch+dt*.48);
  else nitroRocketPitch=Math.max(0,nitroRocketPitch-dt*.9);
  const rocketPitch=nitroRocketPitch;
@@ -1322,6 +1323,7 @@ function carSelectMarkup(){
 }
 function showMainMenu(){
  paused=false;running=false;countdownActive=false;
+ document.getElementById('countdown').style.display='none';
  document.body.classList.remove('racing','paused');
  message.style.display='block';
  message.innerHTML='<h1>1711 <span class="accent">RACING 3D</span></h1><p>Choose your car. Own the circuit.</p><button data-menu="play">PLAY</button><button data-menu="garage" class="secondary">GARAGE</button><button data-menu="settings" class="secondary">SETTINGS</button>';
