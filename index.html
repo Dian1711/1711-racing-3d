@@ -440,24 +440,15 @@ for(let x=-1080;x<1100;x+=18){
  dash.rotation.x=-Math.PI/2;dash.position.set(x,-.012,0);scene.add(dash);
 }
 
-// Sirkuit jalan raya perkotaan: tembok pembatas kokoh dan gedung di kedua sisi.
-const concreteMat=mat(0x9aa3a8),concreteTop=mat(0xc4c9ca),barrierStripeRed=mat(0xd53b32);
+// Jalan kota terbuka tanpa pagar; kerb dan marka menunjukkan tepi aspal.
+const sidewalkMat=mat(0xb5b5ad),curbMat=mat(0xd1d0c8),edgeLineMat=mat(0xf4eee0);
 for(const side of [-1,1]){
- const z=side*13.45;
- // Pembatas beton kontinu di tepi lintasan, dibagi segmen agar detailnya tampak nyata.
- for(let x=-1090;x<1100;x+=4){
-  const block=new THREE.Mesh(new THREE.BoxGeometry(3.9,.95,.62),Math.floor((x+1090)/4)%4===0?barrierStripeRed:concreteMat);
-  block.position.set(x,.47,z);block.castShadow=true;block.receiveShadow=true;scene.add(block);
-  const cap=new THREE.Mesh(new THREE.BoxGeometry(3.9,.09,.68),concreteTop);
-  cap.position.set(x,.99,z);scene.add(cap);
- }
- // Pagar keselamatan di atas tembok beton.
- for(let x=-1090;x<1100;x+=12){
-  const post=new THREE.Mesh(new THREE.BoxGeometry(.10,1.0,.10),darkMat);
-  post.position.set(x,1.48,z);scene.add(post);
- }
- const fence=new THREE.Mesh(new THREE.BoxGeometry(2200,.07,.07),darkMat);
- fence.position.set(0,1.92,z);scene.add(fence);
+ const sidewalk=new THREE.Mesh(new THREE.PlaneGeometry(2200,4.2),sidewalkMat);
+ sidewalk.rotation.x=-Math.PI/2;sidewalk.position.set(0,-.105,side*15.4);sidewalk.receiveShadow=true;scene.add(sidewalk);
+ const curb=new THREE.Mesh(new THREE.BoxGeometry(2200,.16,.22),curbMat);
+ curb.position.set(0,.02,side*13.12);scene.add(curb);
+ const edgeLine=new THREE.Mesh(new THREE.PlaneGeometry(2200,.13),edgeLineMat);
+ edgeLine.rotation.x=-Math.PI/2;edgeLine.position.set(0,-.008,side*12.75);scene.add(edgeLine);
 }
 // Kota padat: gedung perkantoran, apartemen, dan toko dengan jendela berulang.
 const buildingMats=[mat(0x7c8991),mat(0xa7a7a0),mat(0x667985),mat(0xb4b0a6),mat(0x555f69),mat(0xc2c0b8)];
@@ -569,7 +560,7 @@ document.getElementById('lap').textContent='TEST';
 document.querySelector('#lap + span').textContent='MODE';
 document.getElementById('position').textContent='—';
 document.querySelector('#position + span').textContent='AI OFF';
-document.getElementById('hint').textContent='Lintasan kota berpembatas beton — tetap di jalur!';
+document.getElementById('hint').textContent='Jalan raya kota — jangan melewati garis tepi!';
 
 const player=createCar(0xd92724);
 player.position.set(-900,0,0);
