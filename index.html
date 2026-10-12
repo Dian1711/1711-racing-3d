@@ -981,7 +981,12 @@ function routeSlope(x,track=trackOptions[selectedTrack]){
 }
 function buildTrackWorld(track){
  if(!legacyWorldHidden){
-  scene.children.slice().forEach(o=>{if(o.isMesh)o.visible=false;});
+  // Sembunyikan seluruh objek lingkungan lama, termasuk Group dan anak-anaknya.
+  // Mobil pemain, mobil AI, kamera, serta lampu tetap aktif.
+  scene.children.slice().forEach(o=>{
+   const isRaceCar=o===player||ai.some(a=>a.car===o);
+   if(!isRaceCar&&!o.isLight&&o!==camera)o.visible=false;
+  });
   legacyWorldHidden=true;
  }
  if(generatedTrackGroup)scene.remove(generatedTrackGroup);
@@ -1053,33 +1058,89 @@ function buildTrackWorld(track){
   }
  }
  gate(START_LINE_X,'START');gate(START_LINE_X+track.distance,'FINISH');
- // Siluet khas tiap lokasi agar pilihan trek terasa berbeda, bukan sekadar beda warna.
+ // Lingkungan ditempatkan di luar bahu jalan, mengikuti arah tikungan dan tidak menimpa aspal.
  const trunkMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0x786044:0x5a4028});
  const leafMat=new THREE.MeshStandardMaterial({color:track.scene==='forest'?0x245b2e:0x387044});
+ const pineMat=new THREE.MeshStandardMaterial({color:0x234b38});
  const rockMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0xb78a50:track.scene==='mountain'?0x67717b:0x778a83});
- const buildingMat=new THREE.MeshStandardMaterial({color:0x8a9ba8,roughness:.85});
- for(let i=0;i<Math.floor(track.distance/95);i++){
-  const x=START_LINE_X+45+i*95;
+ const buildingMatsLocal=[0x8797a4,0x9ca8ad,0x657785,0xb2b0a5].map(color=>new THREE.MeshStandardMaterial({color,roughness:.9}));
+ const railMat=new THREE.MeshStandardMaterial({color:track.scene==='grandprix'?0xe5e7eb:0x8b969c,metalness:.25,roughness:.6});
+ const addRoadside=(mesh,x,y,z,yaw=0)=>{mesh.position.set(x,y,z);mesh.rotation.y=yaw;mesh.castShadow=true;add(mesh);return mesh;};
+ const samplesEnv=Math.floor(track.distance/70);
+ for(let i=0;i<samplesEnv;i++){
+  const x=START_LINE_X+45+i*70;
   const z=routeCenter(x,track);
+  const slope=routeSlope(x,track);
+  const norm=Math.sqrt(1+slope*slope);
+  const nx=-slope/norm,nz=1/norm;
+  const yaw=-Math.atan(slope);
   for(const side of [-1,1]){
-   const sideZ=z+side*(28+Math.random()*24);
-   if(track.scene==='city'||track.scene==='grandprix'){
-    const h=10+Math.random()*35;
-    const b=new THREE.Mesh(new THREE.BoxGeometry(12+Math.random()*14,h,12+Math.random()*12),buildingMat);
-    b.position.set(x,h/2,sideZ);add(b);
-   }else if(track.scene==='desert'||track.scene==='canyon'||track.scene==='mountain'){
-    const h=8+Math.random()*30;
-    const rock=new THREE.Mesh(new THREE.ConeGeometry(7+Math.random()*10,h,5),rockMat);
-    rock.position.set(x,h/2,sideZ);rock.rotation.z=(Math.random()-.5)*.3;add(rock);
+   const offset=track.scene==='grandprix'?27+Math.random()*8:34+Math.random()*22;
+   const px=x+nx*side*offset,pz=z+nz*side*offset;
+   if(track.scene==='city'){
+    const w=12+Math.random()*9,d=12+Math.random()*9,h=12+Math.random()*34;
+    addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),buildingMatsLocal[i%buildingMatsLocal.length]),px,h/2,pz,yaw);
+    const roof= new THREE.Mesh(new THREE.BoxGeometry(w+.4,.35,d+.4),buildingMatsLocal[(i+1)%buildingMatsLocal.length]);
+    addRoadside(roof,px,h+.16,pz,yaw);
+   }else if(track.scene==='canyon'){
+    const h=12+Math.random()*24;
+    const rock=new THREE.Mesh(new THREE.ConeGeometry(7+Math.random()*7,h,5),rockMat);
+    addRoadside(rock,px,h/2,pz,yaw+(Math.random()-.5)*.35);
+   }else if(track.scene==='forest'){
+    const h=8+Math.random()*10;
+    addRoadside(new THREE.Mesh(new THREE.CylinderGeometry(.3,.55,h,7),trunkMat),px,h/2,pz);
+    addRoadside(new THREE.Mesh(new THREE.ConeGeometry(3.4+Math.random()*1.4,h*.62,7),leafMat),px,h*.9,pz);
+   }else if(track.scene==='desert'){
+    if(i%3!==0){
+     const h=7+Math.random()*15;
+     addRoadside(new THREE.Mesh(new THREE.ConeGeometry(5+Math.random()*7,h,5),rockMat),px,h/2,pz,yaw);
+    }else{
+     const cactusMat=new THREE.MeshStandardMaterial({color:0x467348});
+     addRoadside(new THREE.Mesh(new THREE.CylinderGeometry(.55,.7,3.8,7),cactusMat),px,1.9,pz);
+     addRoadside(new THREE.Mesh(new THREE.CylinderGeometry(.3,.35,1.8,7),cactusMat),px+1,2.2,pz,yaw);
+    }
+   }else if(track.scene==='coast'){
+    // Jalur pesisir: pohon palem dan bidang laut yang terpisah dari aspal.
+    const palmTrunk=new THREE.Mesh(new THREE.CylinderGeometry(.25,.45,7,7),trunkMat);
+    addRoadside(palmTrunk,px,3.5,pz);
+    for(let leaf=0;leaf<5;leaf++){
+     const frond=new THREE.Mesh(new THREE.ConeGeometry(.65,4.2,5),leafMat);
+     addRoadside(frond,px+Math.cos(leaf*Math.PI*2/5)*1.4,7.1,pz+Math.sin(leaf*Math.PI*2/5)*1.4,yaw+leaf*Math.PI*2/5);
+    }
+   }else if(track.scene==='mountain'){
+    const h=10+Math.random()*23;
+    const rock=new THREE.Mesh(new THREE.ConeGeometry(7+Math.random()*8,h,5),rockMat);
+    addRoadside(rock,px,h/2,pz,yaw);
+    if(i%2===0){
+     const treeH=5+Math.random()*5;
+     addRoadside(new THREE.Mesh(new THREE.ConeGeometry(2.7,treeH,7),pineMat),px+side*9,treeH/2,pz);
+    }
    }else{
-    const h=track.scene==='coast'?3+Math.random()*4:7+Math.random()*9;
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.25,.4,h,6),trunkMat);
-    trunk.position.set(x,h/2,sideZ);add(trunk);
-    const crown=new THREE.Mesh(new THREE.ConeGeometry(track.scene==='coast'?2.2:3.2,h*.75,7),leafMat);
-    crown.position.set(x,h+1,sideZ);add(crown);
+    // Grand Prix: pagar lintasan dan tribun teratur, tanpa gedung/pohon acak.
+    const barrier=new THREE.Mesh(new THREE.BoxGeometry(5,.9,.55),railMat);
+    addRoadside(barrier,px, .45,pz,yaw);
+    if(i%2===0){
+     const stand=new THREE.Mesh(new THREE.BoxGeometry(16,4,5),buildingMatsLocal[1]);
+     addRoadside(stand,px+nx*side*8,2,pz+nz*side*8,yaw);
+     for(let row=0;row<3;row++){
+      const seat=new THREE.Mesh(new THREE.BoxGeometry(14,.22,1.0),row%2?curbRed:curbWhite);
+      addRoadside(seat,px+nx*side*(8+row*1.2),1+row*.85,pz+nz*side*(8+row*1.2),yaw);
+     }
+    }
    }
   }
  }
+ // Pembatas jalan kontinu mengikuti kontur, sehingga mobil tidak bisa menembus lingkungan samping.
+ for(let i=0;i<Math.ceil(track.distance/5);i++){
+  const x=START_LINE_X+i*5,z=routeCenter(x,track),slope=routeSlope(x,track),norm=Math.sqrt(1+slope*slope);
+  const nx=-slope/norm,nz=1/norm,yaw=-Math.atan(slope);
+  for(const side of [-1,1]){
+   const rail=new THREE.Mesh(new THREE.BoxGeometry(5.2,.65,.24),railMat);
+   rail.position.set(x+nx*side*14.4,.62,z+nz*side*14.4);
+   rail.rotation.y=yaw;rail.castShadow=true;add(rail);
+  }
+ }
+
 }
 
 function finishRace(){
