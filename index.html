@@ -937,7 +937,7 @@ function updateHUD(){
  updateMinimapDot(track);
  document.getElementById('lap').textContent=Math.floor(progress*100)+'%';
  document.getElementById('remaining').textContent=(track.distance*(1-progress)/1000).toFixed(2);
- document.getElementById('speed').textContent=Math.round(Math.abs(speed)*1.55);
+ document.getElementById('speed').textContent=Math.round(Math.abs(speed)*2.25);
  document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
  document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
  document.getElementById('position').textContent='—';
