@@ -101,7 +101,7 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9bc5df);
 scene.fog=new THREE.Fog(0x9bc5df,170,430);
 
-const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,700);
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.1,900);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
@@ -447,8 +447,8 @@ let playerProgress=0,lastAngle=0,elapsed=0;
 let collisionCooldown=0;
 const TOTAL_LAPS=3;
 const FINISH_PROGRESS=TOTAL_LAPS*TAU;
-const MAX_SPEED=300/4.2; // 300 km/jam tanpa nitro
-const NITRO_SPEED=400/4.2; // sekitar 400 km/jam dengan nitro
+const MAX_SPEED=300/2.8; // 300 km/jam tanpa nitro
+const NITRO_SPEED=400/2.8; // sekitar 400 km/jam dengan nitro
 const MAX_REVERSE=12;
 const message=document.getElementById('message');
 
@@ -713,12 +713,17 @@ function updatePlayer(dt){
  player.userData.nitroFlames.forEach(f=>{f.visible=nitroActive; if(nitroActive)f.scale.setScalar(.75+Math.random()*.7);});
 
  const steering=(keys.right?1:0)-(keys.left?1:0);
+ const speedFraction=Math.min(1,Math.abs(speed)/MAX_SPEED);
+ // Setir progresif: lebih responsif saat melaju, tetapi tidak langsung membelok tajam.
  if(Math.abs(speed)>.3){
   const reverseFactor=speed>=0?1:-1;
-  const turnRate=1.8;
-  heading-=steering*turnRate*dt*(.25+Math.abs(speed)/MAX_SPEED)*reverseFactor;
+  const turnRate=2.65;
+  const steeringResponse=0.22+speedFraction*0.78;
+  heading-=steering*turnRate*dt*steeringResponse*reverseFactor;
  }
-
+ // Sedikit body roll visual saat membelok, dengan kemiringan yang halus.
+ const targetRoll=-steering*speedFraction*0.075;
+ player.rotation.z+=(targetRoll-player.rotation.z)*(1-Math.exp(-dt*4.5));
  player.rotation.y=heading+Math.PI;
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*1.15);
@@ -811,17 +816,17 @@ function animate(){
  updateSound(dt);
 
  const speedRatio=Math.min(1,Math.abs(speed)/MAX_SPEED);
- const cameraDistance=10+speedRatio*4+(nitroActive?2:0);
+ const cameraDistance=6.8+speedRatio*1.8+(nitroActive?.7:0);
  const behind=new THREE.Vector3(
   -Math.sin(heading)*cameraDistance,
-  5.3+speedRatio*1.2,
+  3.4+speedRatio*.8,
   -Math.cos(heading)*cameraDistance
  );
  const target=player.position.clone().add(behind);
- camera.position.lerp(target,.07+speedRatio*.08);
- camera.fov=65+speedRatio*13+(nitroActive?5:0);
+ camera.position.lerp(target,.16+speedRatio*.12);
+ camera.fov=72+speedRatio*9+(nitroActive?4:0);
  camera.updateProjectionMatrix();
- const shake=speedRatio*.035+(nitroActive?.045:0);
+ const shake=speedRatio*.025+(nitroActive?.035:0);
  camera.position.y+=Math.sin(performance.now()*.035)*shake;
  camera.lookAt(player.position.x,player.position.y+1.2,player.position.z);
  renderer.render(scene,camera);
