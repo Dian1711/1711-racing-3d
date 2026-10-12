@@ -37,6 +37,8 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
 #raceTools button{padding:9px 12px;background:#101820dd;border:1px solid #ff5b3566;font-size:11px}
 body.racing #raceTools{display:flex}
 body.racing #controls{display:flex}
+body:not(.racing) .topbar{display:none}
+body:not(.racing) #minimap,body:not(.racing) #nitroWrap,body:not(.racing) #hint{display:none}
 body:not(.racing) #controls{display:none}
 body.paused #controls{display:none}
 #rotateNotice{display:none;position:fixed;inset:0;z-index:50;background:#080b10;color:#fff;align-items:center;justify-content:center;text-align:center;padding:25px;font-weight:900;letter-spacing:2px}
@@ -1567,6 +1569,7 @@ function handleCarCollisions(dt){
 }
 
 function update(dt){
+ if(paused)return;
  if(countdownActive){
   countdownTimer+=dt;
   if(countdownTimer>=1){
@@ -1577,7 +1580,7 @@ function update(dt){
   }
   return;
  }
- if(paused||!running)return;
+ if(!running)return;
  elapsed+=dt;updatePlayer(dt);
  if(player.position.x>=finishLineX&&Math.cos(heading)>-.1)finishRace();
  updateHUD();
