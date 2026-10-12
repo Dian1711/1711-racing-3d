@@ -347,7 +347,8 @@ function createCar(color){
   }
   for(let i=0;i<sections.length-1;i++)for(let j=0;j<segments;j++){
    const a=i*segments+j,b=i*segments+(j+1)%segments,c=(i+1)*segments+j,d=(i+1)*segments+(j+1)%segments;
-   indices.push(a,c,b,b,c,d);
+   // Urutan vertex menghadap keluar agar permukaan bodi mendapat pencahayaan 3D yang benar.
+   indices.push(a,b,c,b,d,c);
   }
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
@@ -380,8 +381,12 @@ function createCar(color){
  // Side skirts and flared wheel arches, layered to create depth.
  for(const x of [-.88,.88]){
   add(new THREE.BoxGeometry(.11,.15,2.48),dark,[x,.43,-.02]);
-  for(const z of [-1.14,1.13]){
-   add(new THREE.SphereGeometry(1,28,18),paint,[x,.61,z],[.13,.24,.49]);
+  for(const z of [-1.13,1.13]){
+   // Lengkungan fender setengah lingkaran, bukan tonjolan bulat di atas ban.
+   const arch=new THREE.Mesh(new THREE.TorusGeometry(.405,.055,9,28,Math.PI),paint);
+   arch.rotation.y=Math.PI/2;
+   arch.position.set(x*1.015,.36,z);
+   arch.castShadow=true;arch.receiveShadow=true;g.add(arch);
   }
   add(new THREE.BoxGeometry(.12,.10,.29),paint,[x*1.04,.91,-.48]);
  }
@@ -497,6 +502,8 @@ const buildingMats=[mat(0x7c8991),mat(0xa7a7a0),mat(0x667985),mat(0xb4b0a6),mat(
 const windowMats=[new THREE.MeshStandardMaterial({color:0x263e4b,roughness:.35,metalness:.2}),new THREE.MeshStandardMaterial({color:0x7899a8,roughness:.3,metalness:.15}),new THREE.MeshStandardMaterial({color:0xe0c58a,emissive:0x3a2c12,emissiveIntensity:.15})];
 const shopMats=[mat(0x25465b),mat(0x873f32),mat(0x3b6656),mat(0x6b526f)];
 function makeBuilding(x,side,index){
+ // Selang-selingkan rumah beratap dengan gedung kota supaya lingkungan lebih beragam.
+ if(index%4===1){makeHouse(x,side,index);return;}
  const width=12+Math.random()*13;
  const depth=12+Math.random()*15;
  const floors=3+Math.floor(Math.random()*11);
@@ -529,6 +536,53 @@ function makeBuilding(x,side,index){
  awning.position.set(0,2.8,faceZ-side*.48);group.add(awning);
  scene.add(group);
 }
+function makeHouse(x,side,index){
+ const width=12+Math.random()*5;
+ const depth=10+Math.random()*5;
+ const wallHeight=3.4+Math.random()*1.1;
+ const roofHeight=2.0+Math.random()*1.0;
+ const z=side*(25+depth/2+Math.random()*8);
+ const group=new THREE.Group();
+ group.position.set(x,0,z);
+ const wallColors=[0xd8c7a8,0xc9d0cb,0xe0d0bb,0xb7c5c8,0xe5d8c4];
+ const wallMat=mat(wallColors[index%wallColors.length]);
+ const wall=new THREE.Mesh(new THREE.BoxGeometry(width,wallHeight,depth),wallMat);
+ wall.position.y=wallHeight/2;wall.castShadow=true;wall.receiveShadow=true;group.add(wall);
+ // Dua bidang atap miring bertemu di bubungan, seperti rumah di kawasan pinggir kota.
+ const roofMat=mat([0x743d31,0x8a4936,0x4d5156,0x65483b][index%4]);
+ const slopeLength=Math.sqrt((width/2)*(width/2)+roofHeight*roofHeight);
+ const slopeAngle=Math.atan2(roofHeight,width/2);
+ const leftRoof=new THREE.Mesh(new THREE.BoxGeometry(slopeLength,.20,depth+.65),roofMat);
+ leftRoof.position.set(-width/4,wallHeight+roofHeight/2,0);
+ leftRoof.rotation.z=slopeAngle;leftRoof.castShadow=true;leftRoof.receiveShadow=true;group.add(leftRoof);
+ const rightRoof=new THREE.Mesh(new THREE.BoxGeometry(slopeLength,.20,depth+.65),roofMat);
+ rightRoof.position.set(width/4,wallHeight+roofHeight/2,0);
+ rightRoof.rotation.z=-slopeAngle;rightRoof.castShadow=true;rightRoof.receiveShadow=true;group.add(rightRoof);
+ // Dinding segitiga pada kedua ujung atap.
+ const gableShape=new THREE.Shape();
+ gableShape.moveTo(-width/2,0);gableShape.lineTo(0,roofHeight);gableShape.lineTo(width/2,0);gableShape.closePath();
+ const gableGeo=new THREE.ShapeGeometry(gableShape);
+ for(const frontZ of [-depth/2-.015,depth/2+.015]){
+  const gable=new THREE.Mesh(gableGeo,new THREE.MeshStandardMaterial({color:wallColors[index%wallColors.length],roughness:.9,side:THREE.DoubleSide}));
+  gable.position.set(0,wallHeight,frontZ);group.add(gable);
+ }
+ // Jendela depan dan pintu menghadap jalan.
+ const faceZ=-side*(depth/2+.06);
+ const windowMat=windowMats[index%windowMats.length];
+ for(const wx of [-width*.28,width*.28]){
+  const win=new THREE.Mesh(new THREE.BoxGeometry(1.15,1.05,.08),windowMat);
+  win.position.set(wx,wallHeight*.57,faceZ);group.add(win);
+  const frame=new THREE.Mesh(new THREE.BoxGeometry(1.28,1.18,.10),whiteMat);
+  frame.position.set(wx,wallHeight*.57,faceZ+side*.025);group.add(frame);
+  win.position.z=faceZ-side*.04;
+ }
+ const door=new THREE.Mesh(new THREE.BoxGeometry(.9,2.15,.10),mat(0x654532));
+ door.position.set(0,1.08,faceZ-side*.035);group.add(door);
+ const porch=new THREE.Mesh(new THREE.BoxGeometry(width*.45,.16,1.2),roofMat);
+ porch.position.set(0,2.55,faceZ-side*.55);group.add(porch);
+ scene.add(group);
+}
+
 let buildingIndex=0;
 for(let x=-1080;x<=1080;x+=34){
  for(const side of [-1,1]){
@@ -871,11 +925,17 @@ function updatePlayer(dt){
  const safeEdge=11.55;
  if(player.position.z>safeEdge){
   player.position.z=safeEdge;
-  if(speed>0)speed*=.72;
+  speed=0;
+  nitroActive=false;
+  keys.gas=false;
+  keys.nitro=false;
   steeringInput=Math.min(steeringInput,0);
  }else if(player.position.z< -safeEdge){
   player.position.z=-safeEdge;
-  if(speed>0)speed*=.72;
+  speed=0;
+  nitroActive=false;
+  keys.gas=false;
+  keys.nitro=false;
   steeringInput=Math.max(steeringInput,0);
  }
 
