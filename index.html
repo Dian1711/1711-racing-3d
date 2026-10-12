@@ -128,6 +128,7 @@ const glassMat=mat(0x8fc8df,.35);
 
 const nitroGlowMat=new THREE.MeshBasicMaterial({color:0x168dff,transparent:true,opacity:.98});
 const nitroRedMat=new THREE.MeshBasicMaterial({color:0xff2518,transparent:true,opacity:.96});
+const nitroOrangeMat=new THREE.MeshBasicMaterial({color:0xff8a16,transparent:true,opacity:.98});
 
 // Tekstur aspal dibuat secara prosedural agar jalan tidak tampak polos seperti balok.
 function makeAsphaltTexture(){
@@ -388,13 +389,17 @@ function createCar(color){
  for(const x of [-.51,.51]){
   add(new THREE.BoxGeometry(.10,.30,.12),paint,[x,.99,1.02]);
  }
- // Behel/roll hoop tinggi di atas kap belakang, dengan dua kaki dan palang melintang.
- for(const x of [-.40,.40]){
-  add(new THREE.BoxGeometry(.075,.38,.075),dark,[x,1.12,.76]);
-  add(new THREE.BoxGeometry(.035,.34,.04),white,[x,1.13,.716]);
+ // Behel/roll hoop belakang dibuat lebih lebar dengan warna titanium-gold.
+ const behelMat=new THREE.MeshStandardMaterial({color:0xd5a447,metalness:.78,roughness:.24});
+ const behelHighlight=mat(0xffe4a0,.28);
+ for(const x of [-.64,.64]){
+  add(new THREE.BoxGeometry(.09,.40,.085),dark,[x,1.13,.76]);
+  add(new THREE.BoxGeometry(.052,.36,.052),behelMat,[x,1.14,.70]);
+  add(new THREE.BoxGeometry(.026,.32,.025),behelHighlight,[x-.018,1.15,.669]);
  }
- add(new THREE.BoxGeometry(.88,.075,.075),dark,[0,1.30,.76]);
- add(new THREE.BoxGeometry(.72,.025,.035),white,[0,1.345,.718]);
+ add(new THREE.BoxGeometry(1.40,.09,.085),dark,[0,1.32,.76]);
+ add(new THREE.BoxGeometry(1.28,.052,.052),behelMat,[0,1.36,.705]);
+ add(new THREE.BoxGeometry(1.12,.022,.026),behelHighlight,[0,1.395,.675]);
  // Sirip aerodinamis tengah (shark fin) mengalir dari kokpit ke sayap belakang.
  const finShape=new THREE.Shape();
  finShape.moveTo(-.48,.02);
@@ -450,6 +455,8 @@ function createCar(color){
   const marker=new THREE.Mesh(new THREE.BoxGeometry(.035,.075,.09),spokeAccent);
   marker.position.set(0,.19,.07);w.add(marker);
   w.position.set(x,.36,z);
+  // Roda depan bisa membelok mengikuti input setir.
+  w.userData.front=z<0;
   w.children.forEach(o=>{o.castShadow=true;o.receiveShadow=true;});
   g.add(w);wheels.push(w);
  }
@@ -467,8 +474,10 @@ function createCar(color){
   // Api luar merah dengan inti biru terang saat nitro aktif.
   const outerFlame=new THREE.Mesh(new THREE.ConeGeometry(.095,.48,12),nitroRedMat);
   outerFlame.rotation.x=Math.PI/2;outerFlame.position.z=.10;flameGroup.add(outerFlame);
-  const blueCore=new THREE.Mesh(new THREE.ConeGeometry(.048,.34,12),nitroGlowMat);
-  blueCore.rotation.x=Math.PI/2;blueCore.position.z=.04;flameGroup.add(blueCore);
+  const orangeLayer=new THREE.Mesh(new THREE.ConeGeometry(.073,.40,12),nitroOrangeMat);
+  orangeLayer.rotation.x=Math.PI/2;orangeLayer.position.set(0,.008,.045);flameGroup.add(orangeLayer);
+  const blueCore=new THREE.Mesh(new THREE.ConeGeometry(.045,.32,12),nitroGlowMat);
+  blueCore.rotation.x=Math.PI/2;blueCore.position.set(0,-.006,-.005);flameGroup.add(blueCore);
   flameGroup.position.set(x,.48,1.58);flameGroup.visible=false;g.add(flameGroup);nitroFlames.push(flameGroup);
  }
  g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;
@@ -1080,7 +1089,11 @@ function updatePlayer(dt){
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
  // Putaran roda dibuat terbaca, tidak terlalu cepat hingga terlihat seperti roda polos.
  const wheelSpin=speed*dt*.42;
- player.userData.wheels.forEach(w=>w.rotation.x+=wheelSpin);
+ player.userData.wheels.forEach(w=>{
+  w.rotation.x+=wheelSpin;
+  // Sudut roda depan ikut belok, lalu kembali lurus ketika setir dilepas.
+  w.rotation.y=w.userData.front? -steeringInput*.48:0;
+ });
 
 
  // Tepi jalan tidak memantulkan mobil: tetap di tepi, lalu belokkan arah secara perlahan ke dalam.
