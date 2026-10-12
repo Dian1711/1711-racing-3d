@@ -331,18 +331,23 @@ function createCar(color){
   m.castShadow=true;m.receiveShadow=true;g.add(m);return m;
  };
  // Formula-style low monocoque chassis, with the pointed nose facing local -Z.
- add(new THREE.BoxGeometry(1.05,.30,2.45),paint,[0,.48,.12]);
- // Narrow tapered nose and front wing.
- add(new THREE.BoxGeometry(.68,.22,1.45),paint,[0,.49,-1.30]);
- add(new THREE.ConeGeometry(.43,.92,4),paint,[0,.50,-2.02],null,[-Math.PI/2,0,Math.PI/4]);
- add(new THREE.BoxGeometry(2.28,.10,.34),dark,[0,.32,-2.05]);
- add(new THREE.BoxGeometry(2.12,.045,.22),paint,[0,.385,-2.05]);
+ add(new THREE.BoxGeometry(1.05,.30,2.65),paint,[0,.48,.02]);
+ // Nose lebih panjang dan meruncing tajam ke arah depan.
+ add(new THREE.BoxGeometry(.66,.20,1.82),paint,[0,.48,-1.48]);
+ add(new THREE.ConeGeometry(.34,1.38,4),paint,[0,.49,-2.56],null,[-Math.PI/2,0,Math.PI/4]);
+ add(new THREE.BoxGeometry(2.38,.10,.36),dark,[0,.31,-2.48]);
+ add(new THREE.BoxGeometry(2.20,.045,.23),paint,[0,.375,-2.48]);
+ // Ujung sayap depan dengan endplate tegak.
+ for(const x of [-1.08,1.08]){
+  add(new THREE.BoxGeometry(.07,.23,.30),paint,[x,.43,-2.48]);
+ }
  // Side pods and aerodynamic floor.
  for(const x of [-.72,.72]){
   add(new THREE.BoxGeometry(.48,.34,1.25),paint,[x,.48,.10]);
   add(new THREE.BoxGeometry(.54,.10,1.55),dark,[x,.31,.08]);
   // Small upper pod accents.
-  add(new THREE.BoxGeometry(.36,.045,.82),white,[x,.665,.10]);
+  add(new THREE.BoxGeometry(.30,.052,.94),white,[x,.665,.10]);
+  add(new THREE.BoxGeometry(.12,.025,.72),dark,[x,.697,.08]);
  }
  // Raised, compact cockpit and driver helmet.
  add(new THREE.BoxGeometry(.72,.24,.78),dark,[0,.66,.28]);
@@ -351,15 +356,37 @@ function createCar(color){
  add(new THREE.SphereGeometry(.19,16,12),helmetMat,[0,.91,.25]);
  add(new THREE.BoxGeometry(.30,.065,.08),dark,[0,.92,.08]);
  // Rear engine cover and air intake.
- add(new THREE.BoxGeometry(.78,.30,.72),paint,[0,.55,.92]);
- add(new THREE.BoxGeometry(.32,.22,.26),dark,[0,.78,.82]);
+ add(new THREE.BoxGeometry(.78,.30,.78),paint,[0,.55,.88]);
+ add(new THREE.BoxGeometry(.32,.22,.26),dark,[0,.78,.78]);
+ // Sirip aerodinamis tengah (shark fin) mengalir dari kokpit ke sayap belakang.
+ const finShape=new THREE.Shape();
+ finShape.moveTo(-.48,.02);
+ finShape.lineTo(.48,.02);
+ finShape.lineTo(.23,.58);
+ finShape.lineTo(-.20,.72);
+ finShape.lineTo(-.48,.02);
+ const finGeo=new THREE.ExtrudeGeometry(finShape,{depth:.055,bevelEnabled:false});
+ finGeo.rotateY(Math.PI/2);
+ const fin=new THREE.Mesh(finGeo,paint);
+ fin.position.set(-.027,.70,.48);
+ fin.castShadow=true;fin.receiveShadow=true;g.add(fin);
+ // Kontras warna di sisi sirip agar lekuk aerodinamis terlihat.
+ add(new THREE.BoxGeometry(.035,.06,.42),white,[-.065,1.02,.77]);
  // Rear wing with two supports.
  for(const x of [-.56,.56])add(new THREE.BoxGeometry(.09,.38,.10),dark,[x,.66,1.42]);
  add(new THREE.BoxGeometry(1.95,.10,.34),dark,[0,.88,1.48]);
  add(new THREE.BoxGeometry(1.80,.035,.24),paint,[0,.945,1.48]);
- // Simple aerodynamic stripes along the nose and rear body.
- add(new THREE.BoxGeometry(.09,.018,1.48),white,[0,.615,-1.28]);
+ // Corak balap tambahan: garis ganda di hidung, aksen sisi, dan panel belakang.
+ for(const x of [-.16,.16]){
+  add(new THREE.BoxGeometry(.075,.018,1.68),white,[x,.595,-1.43]);
+ }
  add(new THREE.BoxGeometry(.12,.018,.60),white,[0,.715,.88]);
+ for(const x of [-.965,.965]){
+  add(new THREE.BoxGeometry(.035,.12,.78),white,[x,.51,.08]);
+  add(new THREE.BoxGeometry(.04,.055,.48),paint,[x*1.005,.59,-.18]);
+  add(new THREE.BoxGeometry(.04,.055,.40),white,[x*1.005,.59,.56]);
+ }
+ add(new THREE.BoxGeometry(.62,.025,.10),white,[0,.72,1.12]);
  // Four exposed racing tyres, placed outside the chassis.
  const wheels=[];
  for(const x of [-1.02,1.02])for(const z of [-1.25,1.18]){
@@ -368,12 +395,17 @@ function createCar(color){
   tire.rotation.z=Math.PI/2;w.add(tire);
   const rimMesh=new THREE.Mesh(new THREE.CylinderGeometry(.235,.235,.315,24),rim);
   rimMesh.rotation.z=Math.PI/2;w.add(rimMesh);
+  // Ring kontras di velg membuat putaran ban lebih mudah terlihat.
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.18,.018,6,24),white);
+  ring.rotation.y=Math.PI/2;w.add(ring);
   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.33,16),dark);
   hub.rotation.z=Math.PI/2;w.add(hub);
-  for(let k=0;k<6;k++){
-   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.035,.025,.31),white);
-   spoke.position.y=Math.sin(k*Math.PI/3)*.13;
-   spoke.position.z=Math.cos(k*Math.PI/3)*.13;
+  for(let k=0;k<8;k++){
+   const spokeMat=k%2===0?white:dark;
+   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.045,.025,.34),spokeMat);
+   spoke.position.y=Math.sin(k*Math.PI/4)*.13;
+   spoke.position.z=Math.cos(k*Math.PI/4)*.13;
+   spoke.rotation.x=k*Math.PI/4;
    w.add(spoke);
   }
   w.position.set(x,.36,z);
