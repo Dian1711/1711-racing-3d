@@ -484,6 +484,26 @@ for(const side of [-1,1]){
 const buildingMats=[mat(0x7c8991),mat(0xa7a7a0),mat(0x667985),mat(0xb4b0a6),mat(0x555f69),mat(0xc2c0b8)];
 const windowMats=[new THREE.MeshStandardMaterial({color:0x263e4b,roughness:.35,metalness:.2}),new THREE.MeshStandardMaterial({color:0x7899a8,roughness:.3,metalness:.15}),new THREE.MeshStandardMaterial({color:0xe0c58a,emissive:0x3a2c12,emissiveIntensity:.15})];
 const shopMats=[mat(0x25465b),mat(0x873f32),mat(0x3b6656),mat(0x6b526f)];
+// Jalur paving dari pintu/fasad bangunan sampai ke trotoar, selalu menghadap jalan.
+const pathMat=mat(0xaaa9a0);
+const pathEdgeMat=mat(0x777c7b);
+function makeEntryPath(x,side,frontDistance){
+ const sidewalkEdge=17.45;
+ const doorDistance=Math.max(frontDistance,sidewalkEdge+2);
+ const length=doorDistance-sidewalkEdge;
+ const centerDistance=sidewalkEdge+length/2;
+ const path=new THREE.Mesh(new THREE.PlaneGeometry(3.0,length),pathMat);
+ path.rotation.x=-Math.PI/2;
+ path.position.set(x,-.065,side*centerDistance);
+ path.receiveShadow=true;
+ scene.add(path);
+ // Batu pembatas tipis di kiri-kanan jalur paving.
+ for(const dx of [-1.62,1.62]){
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(.12,.07,length),pathEdgeMat);
+  edge.position.set(x+dx,-.025,side*centerDistance);
+  edge.receiveShadow=true;scene.add(edge);
+ }
+}
 function makeBuilding(x,side,index){
  // Selang-selingkan rumah beratap dengan gedung kota supaya lingkungan lebih beragam.
  if(index%4===1){makeHouse(x,side,index);return;}
@@ -492,6 +512,8 @@ function makeBuilding(x,side,index){
  const floors=3+Math.floor(Math.random()*11);
  const height=floors*3.2;
  const z=side*(25+depth/2+Math.random()*8);
+ // Bagian tengah fasad toko menjadi titik tujuan jalur masuk.
+ makeEntryPath(x,side,Math.abs(z)-depth/2-.025);
  const group=new THREE.Group();group.position.set(x,0,z);
  const body=new THREE.Mesh(new THREE.BoxGeometry(width,height,depth),buildingMats[index%buildingMats.length]);
  body.position.y=height/2;body.castShadow=true;body.receiveShadow=true;group.add(body);
@@ -525,6 +547,8 @@ function makeHouse(x,side,index){
  const wallHeight=3.4+Math.random()*1.1;
  const roofHeight=2.0+Math.random()*1.0;
  const z=side*(25+depth/2+Math.random()*8);
+ // Jalur paving diarahkan tepat ke pintu rumah yang berada di tengah fasad.
+ makeEntryPath(x,side,Math.abs(z)-depth/2-.06);
  const group=new THREE.Group();
  group.position.set(x,0,z);
  const wallColors=[0xd8c7a8,0xc9d0cb,0xe0d0bb,0xb7c5c8,0xe5d8c4];
@@ -1003,20 +1027,22 @@ function updatePlayer(dt){
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*1.15);
 
 
- // Benturan tepi jalan: pantulan pendek dan teredam, bukan mental berulang seperti bola.
+ // Benturan tepi jalan dibuat singkat: satu koreksi arah, tanpa pantulan bolak-balik.
  const safeEdge=11.55;
  if(player.position.z>safeEdge){
-  player.position.z=safeEdge-.42;
-  if(Math.cos(heading)>0) heading=-Math.PI-heading;
-  speed*=.78;
+  player.position.z=safeEdge-.12;
+  if(speed*Math.cos(heading)>0) heading=-Math.PI-heading;
+  speed*=.68;
+  steeringInput*=.25;
   nitroActive=false;keys.nitro=false;
-  player.rotation.z=-.055;
+  player.rotation.z=-.025;
  }else if(player.position.z< -safeEdge){
-  player.position.z=-safeEdge+.42;
-  if(Math.cos(heading)<0) heading=Math.PI-heading;
-  speed*=.78;
+  player.position.z=-safeEdge+.12;
+  if(speed*Math.cos(heading)<0) heading=Math.PI-heading;
+  speed*=.68;
+  steeringInput*=.25;
   nitroActive=false;keys.nitro=false;
-  player.rotation.z=.055;
+  player.rotation.z=.025;
  }
 
  // Mode sirkuit kota: uji akselerasi tetap aktif, AI masih nonaktif.
@@ -1106,8 +1132,8 @@ function animate(){
   -Math.cos(heading)*cameraDistance
  );
  const target=player.position.clone().add(behind);
- // Jarak, tinggi, dan FOV kamera tetap sama meski kecepatan bertambah.
- camera.position.lerp(target,.20);
+ // Kamera mengikuti posisi mobil langsung dengan jarak dan sudut tetap; tidak tertinggal saat akselerasi.
+ camera.position.copy(target);
  camera.fov=68;
  camera.updateProjectionMatrix();
  camera.lookAt(player.position.x,player.position.y+.92,player.position.z);
