@@ -1452,9 +1452,9 @@ function startGame(){
  countdownActive=true;countdownValue=3;countdownTimer=0;
  player.position.set(START_LINE_X,0,routeCenter(START_LINE_X,track));player.rotation.y=heading+Math.PI;
  ai.forEach((a,i)=>{
-  a.progress=START_LINE_X+[95,175,255][i];
-  a.speed=[30,37,33][i];
-  a.lane=[-5,0,5][i];
+  a.progress=START_LINE_X+[95,185,275][i];
+  a.speed=[27,33,30][i];
+  a.lane=[-5.2,5.2,-5.2][i];
   a.targetLane=a.lane;
   a.finished=false;
   a.car.visible=true;
@@ -1701,28 +1701,22 @@ function placeTrafficCar(a,track){
 }
 function updateAI(dt){
  const track=trackOptions[selectedTrack];
+ // Rintangan menetap di jalur masing-masing: kiri, kanan, lalu kiri.
+ // Setelah pemain melewatinya, mobil muncul lagi di depan dengan jarak terpisah.
+ const fixedLanes=[-5.2,5.2,-5.2];
+ const respawnGaps=[95,185,275];
  for(let i=0;i<ai.length;i++){
   const a=ai[i];
-  if(a.finished)continue;
-  // Mobil lalu lintas berjalan di lintasan yang sama dan menyalip lewat jalur samping.
-  let desired=[-5,0,5][i];
-  const gap=a.progress-player.position.x;
-  if(gap> -22&&gap<42){
-   desired=a.lane<=0?6:-6;
-  }else if(a.lane!==[-5,0,5][i]&&Math.abs(gap)>65){
-   desired=[-5,0,5][i];
+  a.lane=fixedLanes[i];
+  a.targetLane=a.lane;
+  a.speed=[27,33,30][i];
+  if(a.progress<player.position.x-18){
+   a.progress=player.position.x+respawnGaps[i];
   }
-  for(let j=0;j<ai.length;j++){
-   if(i===j||ai[j].finished)continue;
-   const other=ai[j];
-   if(Math.abs(other.progress-a.progress)<24&&Math.abs(other.lane-a.lane)<4){
-    desired=a.lane<=0?6:-6;
-   }
+  if(a.progress>finishLineX-8){
+   a.progress=player.position.x+respawnGaps[i];
   }
-  a.targetLane=desired;
-  a.lane=THREE.MathUtils.damp(a.lane,a.targetLane,1.1,dt);
   a.progress+=a.speed*dt;
-  if(a.progress>finishLineX+30){a.progress=START_LINE_X+20;a.lane=[-5,0,5][i];}
   placeTrafficCar(a,track);
   a.car.userData.wheels.forEach(w=>w.wheel.rotation.x+=a.speed*dt*.42);
  }
