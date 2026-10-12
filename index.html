@@ -40,7 +40,7 @@ body:not(.racing):before{content:"";position:fixed;inset:0;z-index:1;pointer-eve
 #analogSpeedo svg{width:100%;height:100%;display:block}
 #controls{align-items:flex-end;justify-content:space-between;gap:8px}
 #controls .steering-group{flex:0 0 auto}
-#controls .controlgroup:last-child{flex:0 0 auto}
+#controls .controlgroup:last-child{flex:0 0 auto;align-items:flex-end}
 body:not(.racing) #analogSpeedo{display:none}
 body.racing .stats .stat:last-child{display:none}
 body:not(.racing) .topbar{display:none}
@@ -52,7 +52,7 @@ body:not(.racing) .topbar{display:none}
 #message select{width:100%;margin:7px 0 3px;padding:12px;border-radius:10px;border:1px solid #ffffff40;background:#202d39;color:#fff;font-weight:700}
 #message .menu-row{display:flex;gap:8px}
 #message .menu-row button{flex:1}
-#raceTools{position:fixed;top:205px;left:12px;display:none;gap:7px;pointer-events:auto}
+#raceTools{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:none;gap:7px;pointer-events:auto;z-index:6;white-space:nowrap}
 #raceTools button{padding:9px 12px;background:#101820dd;border:1px solid #ff5b3566;font-size:11px}
 body.racing #raceTools{display:flex}
 body.racing #controls{display:flex}
@@ -70,7 +70,7 @@ body.paused #controls{display:none}
 .stats .stat:last-child span{font-size:9px;letter-spacing:1.5px}
 @media(max-width:520px){
  #minimap{top:7px;right:7px;left:auto;width:132px;padding:5px 7px}
- #raceTools{top:174px;left:7px}
+ #raceTools{top:7px;left:50%;transform:translateX(-50%);gap:5px}
  .mapLabel{font-size:8px}
  .mapLegend{font-size:7px}
  .stats .stat:last-child{bottom:96px;min-width:82px;padding:6px 10px}
@@ -153,6 +153,8 @@ body.paused #controls{display:none}
 .ctrl.nitro{width:52px;height:51px;font-size:20px;flex:0 0 auto}
 .ctrl.nitro small{font-size:9px;letter-spacing:0}
 .ctrl.brake span{font-size:9px;line-height:1.25}
+#controls .controlgroup:last-child>.ctrl.brake{align-self:flex-end}
+#controls .accelerator-stack{align-self:flex-end}
 @media(max-width:520px){
  .topbar .stats{top:98px;right:7px;gap:4px}
  .topbar .stats .stat,.topbar .stats .stat:last-child{min-width:68px;padding:5px 7px}
@@ -993,14 +995,13 @@ function drawMinimap(track){
  document.getElementById('mapPath').setAttribute('d','M'+pts.join(' L'));
  updateMinimapDot(track);
 }
-function mapYAtX(x,track){
+function mapYAtZ(z,track){
  const range=track.mapRange||{min:-130,max:130};
- const z=routeCenter(x,track);
  return THREE.MathUtils.clamp(66-(z-range.min)/(range.max-range.min||1)*62,3,67);
 }
 function updateMinimapDot(track){
  const ratio=THREE.MathUtils.clamp((player.position.x-START_LINE_X)/track.distance,0,1);
- const x=2+ratio*136,y=mapYAtX(player.position.x,track);
+ const x=2+ratio*136,y=mapYAtZ(player.position.z,track);
  const dot=document.getElementById('mapDot');
  dot.setAttribute('cx',x.toFixed(2));dot.setAttribute('cy',y.toFixed(2));
 }
@@ -1013,7 +1014,8 @@ function updateHUD(){
  document.getElementById('lap').textContent=Math.floor(progress*100)+'%';
  document.getElementById('remaining').textContent=(track.distance*(1-progress)/1000).toFixed(2);
  const shownSpeed=Math.round(Math.abs(speed)*2.25);
- document.getElementById('speed').textContent=shownSpeed;
+ const legacySpeed=document.getElementById('speed');
+ if(legacySpeed)legacySpeed.textContent=shownSpeed;
  const analogValue=document.getElementById('analogSpeedValue');
  if(analogValue)analogValue.textContent=shownSpeed;
  const needle=document.getElementById('speedNeedle');
