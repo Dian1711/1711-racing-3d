@@ -126,10 +126,10 @@ const redMat=mat(0xf3442e);
 const darkMat=mat(0x20252b);
 const glassMat=mat(0x8fc8df,.35);
 
-const nitroGlowMat=new THREE.MeshBasicMaterial({color:0x39d9ff,transparent:true,opacity:1,depthWrite:false});
-const nitroRedMat=new THREE.MeshBasicMaterial({color:0xff2600,transparent:true,opacity:1,depthWrite:false});
-const nitroOrangeMat=new THREE.MeshBasicMaterial({color:0xff9d00,transparent:true,opacity:1,depthWrite:false});
-const nitroYellowMat=new THREE.MeshBasicMaterial({color:0xffffa0,transparent:true,opacity:1,depthWrite:false});
+const nitroGlowMat=new THREE.MeshBasicMaterial({color:0x00bfff,transparent:true,opacity:1,depthWrite:false,toneMapped:false});
+const nitroRedMat=new THREE.MeshBasicMaterial({color:0xff1800,transparent:true,opacity:1,depthWrite:false,toneMapped:false});
+const nitroOrangeMat=new THREE.MeshBasicMaterial({color:0xff7200,transparent:true,opacity:1,depthWrite:false,toneMapped:false});
+const nitroYellowMat=new THREE.MeshBasicMaterial({color:0xfff35a,transparent:true,opacity:1,depthWrite:false,toneMapped:false});
 
 // Tekstur aspal dibuat secara prosedural agar jalan tidak tampak polos seperti balok.
 function makeAsphaltTexture(){
@@ -390,13 +390,15 @@ function createCar(color){
  for(const x of [-.51,.51]){
   add(new THREE.BoxGeometry(.10,.30,.12),paint,[x,.99,1.02]);
  }
- // Behel belakang diperlebar ke samping; batang penghubung ke kap berwarna putih.
+ // Behel belakang berwarna kuning metalik agar tegas terpisah dari bodi merah; batang penghubung tetap putih.
+ const behelMetal=new THREE.MeshStandardMaterial({color:0xffd32a,metalness:.48,roughness:.28});
+ const behelDark=mat(0x20252b,.35);
  for(const x of [-.76,.76]){
-  add(new THREE.BoxGeometry(.075,.27,.075),dark,[x,1.00,.76]);
-  add(new THREE.BoxGeometry(.045,.30,.045),white,[x*.84,.84,.78]);
+  add(new THREE.BoxGeometry(.085,.27,.085),behelDark,[x,1.00,.76]);
+  add(new THREE.BoxGeometry(.052,.30,.052),white,[x*.84,.84,.78]);
  }
- add(new THREE.BoxGeometry(1.68,.085,.085),dark,[0,1.14,.76]);
- add(new THREE.BoxGeometry(1.42,.028,.035),white,[0,1.192,.716]);
+ add(new THREE.BoxGeometry(1.68,.095,.095),behelMetal,[0,1.14,.76]);
+ add(new THREE.BoxGeometry(1.42,.026,.035),white,[0,1.202,.716]);
  // Sirip aerodinamis tengah (shark fin) mengalir dari kokpit ke sayap belakang.
  const finShape=new THREE.Shape();
  finShape.moveTo(-.48,.02);
@@ -471,15 +473,15 @@ function createCar(color){
  for(const x of [-.22,.22]){
   add(new THREE.CylinderGeometry(.055,.07,.12,12),dark,[x,.48,1.43],null,[Math.PI/2,0,0]);
   const flameGroup=new THREE.Group();
-  // Api nitro dibuat jauh lebih panjang dan terang dengan lapisan merah, jingga, biru, dan inti kuning.
-  const outerFlame=new THREE.Mesh(new THREE.ConeGeometry(.145,.92,14),nitroRedMat);
-  outerFlame.rotation.x=Math.PI/2;outerFlame.position.z=.30;flameGroup.add(outerFlame);
-  const orangeLayer=new THREE.Mesh(new THREE.ConeGeometry(.108,.76,14),nitroOrangeMat);
-  orangeLayer.rotation.x=Math.PI/2;orangeLayer.position.set(0,.006,.22);flameGroup.add(orangeLayer);
-  const blueCore=new THREE.Mesh(new THREE.ConeGeometry(.068,.58,12),nitroGlowMat);
-  blueCore.rotation.x=Math.PI/2;blueCore.position.set(0,-.008,.12);flameGroup.add(blueCore);
-  const yellowCore=new THREE.Mesh(new THREE.ConeGeometry(.034,.40,10),nitroYellowMat);
-  yellowCore.rotation.x=Math.PI/2;yellowCore.position.set(0,0,.06);flameGroup.add(yellowCore);
+  // Ukuran api dikembalikan seperti semula; yang diubah hanya warna agar merah-jingga dan inti biru lebih jelas.
+  const outerFlame=new THREE.Mesh(new THREE.ConeGeometry(.095,.48,12),nitroRedMat);
+  outerFlame.rotation.x=Math.PI/2;outerFlame.position.z=.10;flameGroup.add(outerFlame);
+  const orangeLayer=new THREE.Mesh(new THREE.ConeGeometry(.073,.40,12),nitroOrangeMat);
+  orangeLayer.rotation.x=Math.PI/2;orangeLayer.position.set(0,.008,.045);flameGroup.add(orangeLayer);
+  const blueCore=new THREE.Mesh(new THREE.ConeGeometry(.045,.32,12),nitroGlowMat);
+  blueCore.rotation.x=Math.PI/2;blueCore.position.set(0,-.006,-.005);flameGroup.add(blueCore);
+  const yellowCore=new THREE.Mesh(new THREE.ConeGeometry(.024,.22,10),nitroYellowMat);
+  yellowCore.rotation.x=Math.PI/2;yellowCore.position.set(0,0,-.025);flameGroup.add(yellowCore);
   flameGroup.position.set(x,.48,1.58);flameGroup.visible=false;g.add(flameGroup);nitroFlames.push(flameGroup);
  }
  g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;
