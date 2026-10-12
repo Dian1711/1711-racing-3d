@@ -367,7 +367,7 @@ function createCar(color){
   const exhaust=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,.18,8),darkPaint);
   exhaust.rotation.x=Math.PI/2;exhaust.position.set(x,.52,1.99);g.add(exhaust);
   const flame=new THREE.Mesh(new THREE.ConeGeometry(.13,.7,8),nitroGlowMat);
-  flame.rotation.x=-Math.PI/2;flame.position.set(x,.52,2.32);flame.visible=false;g.add(flame);nitroFlames.push(flame);
+  flame.rotation.x=Math.PI/2;flame.position.set(x,.52,2.32);flame.visible=false;g.add(flame);nitroFlames.push(flame);
  }
  // Garis dekorasi pada kap mesin.
  const stripeMat=new THREE.MeshBasicMaterial({color:0xffffff});
