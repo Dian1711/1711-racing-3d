@@ -24,6 +24,8 @@ canvas{display:block}
 #message p{color:#cbd5e1;font-size:13px;line-height:1.5}
 button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:800;padding:12px;cursor:pointer;touch-action:none}
 #message button{width:100%;margin-top:8px}
+#trackSelect{width:100%;margin:7px 0 3px;padding:12px;border-radius:10px;border:1px solid #ffffff40;background:#202d39;color:#fff;font-weight:700}
+#countdown{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:10;background:#08111b55;font-size:clamp(64px,18vw,132px);font-weight:1000;letter-spacing:3px;color:#fff;text-shadow:0 5px 0 #b72f1d,0 0 32px #ff5b35;pointer-events:none}
 #controls{position:absolute;bottom:20px;left:0;right:0;display:flex;justify-content:space-between;padding:0 12px;pointer-events:none}
 .controlgroup{display:flex;gap:7px;pointer-events:auto}
 .ctrl{width:54px;height:56px;border-radius:15px;background:#18232ddd;border:1px solid #ffffff55;font-size:21px;user-select:none}
@@ -66,18 +68,28 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
     </div>
     <div class="stats">
       <div class="panel stat"><strong id="position">4/4</strong><span>POSISI</span></div>
-      <div class="panel stat"><strong id="lap">1/3</strong><span>PUTARAN</span></div>
+      <div class="panel stat"><strong id="lap">0%</strong><span>MENUJU FINISH</span></div>
       <div class="panel stat"><strong id="speed">0</strong><span>KM/J</span></div>
     </div>
   </div>
 
   <div id="message">
     <h1>1711 RACING 3D</h1>
-    <p>Kalahkan 3 pembalap AI! Selesaikan 3 putaran dan jadilah yang pertama mencapai garis finis.</p>
+    <p>Pilih sirkuit, tunggu hitungan mundur, lalu pacu mobil sampai garis FINISH. Tidak ada sistem putaran.</p>
+    <select id="trackSelect" aria-label="Pilih sirkuit">
+      <option value="0">1. City Sprint — 450 m</option>
+      <option value="1">2. Sunset Run — 700 m</option>
+      <option value="2">3. Forest Dash — 950 m</option>
+      <option value="3">4. Desert Highway — 1.200 m</option>
+      <option value="4">5. Coastal Express — 1.450 m</option>
+      <option value="5">6. Night Racer — 1.700 m</option>
+      <option value="6">7. Grand Prix — 1.900 m</option>
+    </select>
     <button id="start">MULAI BALAPAN</button>
     <p>W / ↑ Gas · S Mundur · ↓ Rem · A/D Belok · Shift / X Nitro</p>
   </div>
 
+  <div id="countdown">3</div>
   <div id="nitroWrap"><div id="nitroLabel">⚡ NITRO <span id="nitroPct">100%</span></div><div id="nitroTrack"><div id="nitroFill"></div></div></div>
   <div id="controls">
     <div class="controlgroup">
@@ -531,6 +543,18 @@ for(let x=-1080;x<1100;x+=18){
  dash.rotation.x=-Math.PI/2;dash.position.set(x,-.012,0);scene.add(dash);
 }
 
+// Garis START dan FINISH kotak-kotak untuk balapan sekali jalan.
+const raceLineObjects=[];
+function makeRaceLine(x){
+ for(let i=0;i<12;i++)for(let j=0;j<2;j++){
+  const tile=new THREE.Mesh(new THREE.BoxGeometry(.85,.035,1.3),(i+j)%2===0?whiteMat:darkMat);
+  tile.position.set(x,.025,(i-5.5)*1.3);
+  tile.receiveShadow=true;scene.add(tile);raceLineObjects.push(tile);
+ }
+}
+makeRaceLine(-900);
+let finishLineX=-450;
+
 // Jalan kota terbuka tanpa pagar; kerb dan marka menunjukkan tepi aspal.
 const sidewalkMat=mat(0xb5b5ad),curbMat=mat(0xd1d0c8),edgeLineMat=mat(0xf4eee0);
 for(const side of [-1,1]){
@@ -771,10 +795,10 @@ for(let x=-1060;x<=1060;x+=48){
 }
 document.querySelector('.brand').innerHTML='1711 <span>URBAN NASCAR</span>';
 document.querySelector('.small').textContent='CITY STREET CIRCUIT';
-document.getElementById('lap').textContent='TEST';
-document.querySelector('#lap + span').textContent='MODE';
+document.getElementById('lap').textContent='0%';
+document.querySelector('#lap + span').textContent='MENUJU FINISH';
 document.getElementById('position').textContent='—';
-document.querySelector('#position + span').textContent='AI OFF';
+document.querySelector('#position + span').textContent='BALAPAN';
 document.getElementById('hint').textContent='Jalan raya kota — jangan melewati garis tepi!';
 
 const player=createCar(0xd92724);
@@ -789,8 +813,19 @@ const ai=[
 
 const keys={left:false,right:false,gas:false,brake:false,reverse:false,nitro:false};
 let nitro=100,nitroActive=false;
-let running=false,playerFinished=false,raceOver=false;
+let running=false,playerFinished=false,raceOver=false,countdownActive=false,countdownValue=0,countdownTimer=0;
 let speed=0,heading=Math.PI/2;
+const trackOptions=[
+ {name:'City Sprint',distance:450,sky:0x9bc5df,road:0x343b43,grass:0x5c8749},
+ {name:'Sunset Run',distance:700,sky:0xf0a16d,road:0x494044,grass:0x8b7146},
+ {name:'Forest Dash',distance:950,sky:0x9ac6b0,road:0x303a36,grass:0x426b3e},
+ {name:'Desert Highway',distance:1200,sky:0xe9c58c,road:0x51483e,grass:0xa18b55},
+ {name:'Coastal Express',distance:1450,sky:0x8fd4e8,road:0x3a4650,grass:0x6b9b72},
+ {name:'Night Racer',distance:1700,sky:0x111c36,road:0x252a35,grass:0x233d34},
+ {name:'Grand Prix',distance:1900,sky:0xb9c7e7,road:0x303642,grass:0x507647}
+];
+let selectedTrack=0;
+const START_LINE_X=-900;
 let steeringInput=0;
 let playerProgress=0,lastAngle=0,elapsed=0;
 let collisionCooldown=0;
@@ -803,16 +838,11 @@ const MAX_REVERSE=12;
 const message=document.getElementById('message');
 
 function updateHUD(){
- document.getElementById('lap').textContent='TEST';
+ const progress=Math.max(0,Math.min(100,((player.position.x-START_LINE_X)/(finishLineX-START_LINE_X))*100));
+ document.getElementById('lap').textContent=Math.floor(progress)+'%';
  document.getElementById('speed').textContent=Math.round(Math.abs(speed)*1.55);
  document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
  document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
-
- const ranks=[
-  {name:'Kamu',progress:playerProgress,isPlayer:true},
-  ...ai.map(a=>({name:a.name,progress:a.progress,isPlayer:false}))
- ].sort((a,b)=>b.progress-a.progress);
-
  document.getElementById('position').textContent='—';
 }
 
@@ -937,52 +967,35 @@ function updateSound(dt=1/60){
  }
 }
 
-function finishRace(winner){
+function finishRace(){
  if(raceOver)return;
- raceOver=true;
- running=false;
-
- const won=winner==='Kamu';
- message.innerHTML=
-  '<h1>'+(won?'🏆 KAMU MENANG!':'BALAPAN SELESAI')+'</h1>'+
-  '<p>'+(won?'Hebat! Kamu mencapai garis finis pertama.':
-  winner+' lebih dulu mencapai garis finis.')+
-  '<br>Waktu balapan: '+elapsed.toFixed(1)+' detik.</p>'+
-  '<button id="restart">BALAP LAGI</button>';
-
+ raceOver=true;running=false;playerFinished=true;speed=0;nitroActive=false;
+ message.innerHTML='<h1>🏁 FINISH!</h1><p>Sirkuit: '+trackOptions[selectedTrack].name+
+  '<br>Waktu tempuh: '+elapsed.toFixed(2)+' detik.</p><button id="restart">BALAP LAGI</button>';
  message.style.display='block';
  document.getElementById('restart').addEventListener('click',startGame);
 }
 
 function startGame(){
  initAudio();
- speed=0;
- nitro=100;nitroActive=false;
- heading=Math.PI/2;
- steeringInput=0;
- playerProgress=0;
- lastAngle=0;
- elapsed=0;
- running=true;
- playerFinished=false;
- raceOver=false;
-
- player.position.set(-900,0,0);
- heading=Math.PI/2;
- player.rotation.y=heading+Math.PI;
-
- ai.forEach((a,i)=>{
-  a.car.visible=false;
-  a.progress=[.13,.25,.37][i];
-  a.speed=[.31,.34,.32][i];
-  a.lane=[-3,0,3][i];
-  a.targetLane=a.lane;
-  a.finished=false;
-  placeCar(a.car,a.progress,a.lane);
- });
-
+ selectedTrack=Number(document.getElementById('trackSelect').value)||0;
+ const track=trackOptions[selectedTrack];
+ finishLineX=START_LINE_X+track.distance;
+ scene.background.setHex(track.sky);scene.fog.color.setHex(track.sky);
+ roadMat.color.setHex(track.road);testGround.material.color.setHex(track.grass);
+ raceLineObjects.forEach(o=>scene.remove(o));raceLineObjects.length=0;
+ makeRaceLine(START_LINE_X);makeRaceLine(finishLineX);
+ document.querySelector('.brand').innerHTML='1711 <span>RACING</span>';
+ document.querySelector('.small').textContent=track.name.toUpperCase();
+ document.getElementById('hint').textContent=track.name+' — capai garis FINISH!';
+ speed=0;nitro=100;nitroActive=false;heading=Math.PI/2;steeringInput=0;
+ playerProgress=0;lastAngle=0;elapsed=0;running=false;playerFinished=false;raceOver=false;
+ countdownActive=true;countdownValue=3;countdownTimer=0;
+ player.position.set(START_LINE_X,0,0);player.rotation.y=heading+Math.PI;
+ ai.forEach(a=>{a.car.visible=false;a.finished=true;});
  Object.keys(keys).forEach(k=>keys[k]=false);
  message.style.display='none';
+ const cd=document.getElementById('countdown');cd.textContent='3';cd.style.display='flex';
  updateHUD();
 }
 
@@ -1182,11 +1195,19 @@ function handleCarCollisions(dt){
 }
 
 function update(dt){
+ if(countdownActive){
+  countdownTimer+=dt;
+  if(countdownTimer>=1){
+   countdownTimer=0;countdownValue--;
+   const cd=document.getElementById('countdown');
+   if(countdownValue>0)cd.textContent=String(countdownValue);
+   else{countdownActive=false;running=true;cd.textContent='GO!';setTimeout(()=>{if(!countdownActive)cd.style.display='none';},650);}
+  }
+  return;
+ }
  if(!running)return;
- elapsed+=dt;
- updatePlayer(dt);
- if(!raceOver)updateAI(dt);
- if(!raceOver)handleCarCollisions(dt);
+ elapsed+=dt;updatePlayer(dt);
+ if(player.position.x>=finishLineX&&Math.cos(heading)>-.1)finishRace();
  updateHUD();
 }
 
