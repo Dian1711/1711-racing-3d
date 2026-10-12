@@ -740,12 +740,15 @@ function updatePlayer(dt){
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*1.15);
 
 
- // Perlambat saat keluar lintasan.
+ // Mode jalan lurus memakai jalan selebar 26 unit.
+ // Jangan beri penalti ketika mobil masih berada di dalam jalan.
  const dist=Math.abs(player.position.z);
- if(dist>ROAD/2-1){
-  // Penalti keluar jalur dibuat bertahap agar mobil tidak mendadak berhenti.
-  const offRoad=Math.min(1,Math.max(0,dist-(ROAD/2-1)));
-  speed*=Math.exp(-offRoad*.7*dt);
+ const roadHalfWidth=13;
+ const offRoadStart=roadHalfWidth-1.2;
+ if(dist>offRoadStart){
+  // Perlambatan di luar jalan sangat bertahap, bukan seperti menginjak rem.
+  const offRoad=Math.min(1,(dist-offRoadStart)/3);
+  speed*=Math.exp(-offRoad*.18*dt);
  }
 
  // Mode tes lurus: tidak menghitung putaran atau garis finis.
