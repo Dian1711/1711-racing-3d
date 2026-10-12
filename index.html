@@ -1231,12 +1231,35 @@ function buildTrackWorld(track){
  }
  gate(START_LINE_X,'START');gate(START_LINE_X+track.distance,'FINISH');
  // Lingkungan ditempatkan di luar bahu jalan, mengikuti arah tikungan dan tidak menimpa aspal.
- const trunkMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0x786044:0x5a4028});
- const leafMat=new THREE.MeshStandardMaterial({color:track.scene==='forest'?0x245b2e:0x387044});
- const pineMat=new THREE.MeshStandardMaterial({color:0x234b38});
- const rockMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0xb78a50:track.scene==='mountain'?0x67717b:0x778a83});
- const buildingMatsLocal=[0x8797a4,0x9ca8ad,0x657785,0xb2b0a5].map(color=>new THREE.MeshStandardMaterial({color,roughness:.9}));
+ const trunkMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0x786044:0x5a4028,roughness:1});
+ const leafMat=new THREE.MeshStandardMaterial({color:track.scene==='forest'?0x245b2e:0x387044,roughness:1});
+ const pineMat=new THREE.MeshStandardMaterial({color:0x234b38,roughness:1});
+ const rockMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0xb78a50:track.scene==='mountain'?0x67717b:0x778a83,roughness:1,flatShading:true});
+ const buildingMatsLocal=[0x8797a4,0x9ca8ad,0x657785,0xb2b0a5].map((color,index)=>{
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
+  const ctx=canvas.getContext('2d');ctx.fillStyle='#'+color.toString(16).padStart(6,'0');ctx.fillRect(0,0,256,256);
+  for(let row=0;row<7;row++)for(let col=0;col<5;col++){
+   const x=10+col*49,y=8+row*35,w=30,h=21;
+   ctx.fillStyle='#36434d';ctx.fillRect(x-3,y-3,w+6,h+6);
+   ctx.fillStyle=(row+col)%3===0?'#f0c98b':'#83b7cb';ctx.fillRect(x,y,w,h);
+   ctx.fillStyle='rgba(15,24,31,.65)';ctx.fillRect(x+w/2-1,y,2,h);ctx.fillRect(x,y+h-2,w,2);
+  }
+  const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
+  return new THREE.MeshStandardMaterial({color:0xffffff,map:tex,roughness:.88});
+ });
  const railMat=new THREE.MeshStandardMaterial({color:track.scene==='grandprix'?0xe5e7eb:0x8b969c,metalness:.25,roughness:.6});
+ function makeNaturalGeometry(seed,style='rock'){
+  const g=new THREE.IcosahedronGeometry(1,2),pos=g.attributes.position;
+  for(let j=0;j<pos.count;j++){
+   const x=pos.getX(j),y=pos.getY(j),z=pos.getZ(j);
+   const wave=Math.sin((x*17+y*11+z*13+seed)*2.1)*.075+Math.sin((x*7-z*9+seed)*3.3)*.045;
+   const yy=style==='ridge'?Math.sign(y)*Math.pow(Math.abs(y),.72)*(1+wave):y*(1+wave);
+   pos.setXYZ(j,x*(1+wave),yy,z*(1+wave));
+  }
+  g.computeVertexNormals();return g;
+ }
+ const rockGeometries=[0,1,2,3,4,5].map(i=>makeNaturalGeometry(i*1.7));
+ const hillGeometries=[0,1,2].map(i=>makeNaturalGeometry(i*2.3,'ridge'));
  const addRoadside=(mesh,x,y,z,yaw=0)=>{mesh.position.set(x,y,z);mesh.rotation.y=yaw;mesh.castShadow=true;add(mesh);return mesh;};
  const samplesEnv=Math.floor((track.distance+approach+runout)/55);
  for(let i=0;i<samplesEnv;i++){
@@ -1250,22 +1273,41 @@ function buildTrackWorld(track){
    const offset=track.scene==='grandprix'?27+Math.random()*8:34+Math.random()*22;
    const px=x+nx*side*offset,pz=z+nz*side*offset;
    if(track.scene==='city'){
-    const w=12+Math.random()*9,d=12+Math.random()*9,h=12+Math.random()*34;
-    addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),buildingMatsLocal[i%buildingMatsLocal.length]),px,h/2,pz,yaw);
-    const roof= new THREE.Mesh(new THREE.BoxGeometry(w+.4,.35,d+.4),buildingMatsLocal[(i+1)%buildingMatsLocal.length]);
-    addRoadside(roof,px,h+.16,pz,yaw);
+    const w=15+Math.random()*13,d=13+Math.random()*12,h=18+Math.random()*38;
+    const buildingMat=buildingMatsLocal[i%buildingMatsLocal.length];
+    addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),buildingMat),px,h/2,pz,yaw);
+    const roofMat=new THREE.MeshStandardMaterial({color:[0x555e66,0x777e82,0x454e58][i%3],roughness:.9});
+    addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w+.5,.65,d+.5),roofMat),px,h+.32,pz,yaw);
+    if(i%3===0){
+     addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w*.3,2.2,d*.28),roofMat),px,h+1.7,pz,yaw);
+     addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w*.62,.3,.35),railMat),px,h+2.85,pz,yaw);
+    }
    }else if(track.scene==='canyon'){
-    const h=12+Math.random()*24;
-    const rock=new THREE.Mesh(new THREE.ConeGeometry(7+Math.random()*7,h,5),rockMat);
-    addRoadside(rock,px,h/2,pz,yaw+(Math.random()-.5)*.35);
+    const h=18+Math.random()*27;
+    const rock=new THREE.Mesh(rockGeometries[i%rockGeometries.length],rockMat);
+    rock.scale.set(8+Math.random()*7,h,7+Math.random()*6);
+    addRoadside(rock,px,h*.42,pz,yaw+(Math.random()-.5)*.12);
+    if(i%3===0){
+     const ridge=new THREE.Mesh(hillGeometries[i%hillGeometries.length],rockMat);
+     ridge.scale.set(30+Math.random()*20,13+Math.random()*9,25+Math.random()*15);
+     addRoadside(ridge,px+side*16,7,pz+side*9,yaw);
+    }
    }else if(track.scene==='forest'){
     const h=8+Math.random()*10;
     addRoadside(new THREE.Mesh(new THREE.CylinderGeometry(.3,.55,h,7),trunkMat),px,h/2,pz);
     addRoadside(new THREE.Mesh(new THREE.ConeGeometry(3.4+Math.random()*1.4,h*.62,7),leafMat),px,h*.9,pz);
    }else if(track.scene==='desert'){
     if(i%3!==0){
-     const h=7+Math.random()*15;
-     addRoadside(new THREE.Mesh(new THREE.ConeGeometry(5+Math.random()*7,h,5),rockMat),px,h/2,pz,yaw);
+     const h=8+Math.random()*13;
+     const rock=new THREE.Mesh(rockGeometries[(i+2)%rockGeometries.length],rockMat);
+     rock.scale.set(6+Math.random()*7,h,7+Math.random()*8);
+     addRoadside(rock,px,h*.38,pz,yaw+(Math.random()-.5)*.18);
+     if(i%4===0){
+      const duneMat=new THREE.MeshStandardMaterial({color:0xc5a267,roughness:1});
+      const dune=new THREE.Mesh(hillGeometries[i%hillGeometries.length],duneMat);
+      dune.scale.set(28+Math.random()*18,8+Math.random()*5,22+Math.random()*12);
+      addRoadside(dune,px+side*14,4,pz+side*7,yaw);
+     }
     }else{
      const cactusMat=new THREE.MeshStandardMaterial({color:0x467348});
      addRoadside(new THREE.Mesh(new THREE.CylinderGeometry(.55,.7,3.8,7),cactusMat),px,1.9,pz);
@@ -1280,12 +1322,19 @@ function buildTrackWorld(track){
      addRoadside(frond,px+Math.cos(leaf*Math.PI*2/5)*1.4,7.1,pz+Math.sin(leaf*Math.PI*2/5)*1.4,yaw+leaf*Math.PI*2/5);
     }
    }else if(track.scene==='mountain'){
-    const h=10+Math.random()*23;
-    const rock=new THREE.Mesh(new THREE.ConeGeometry(7+Math.random()*8,h,5),rockMat);
-    addRoadside(rock,px,h/2,pz,yaw);
+    const h=14+Math.random()*24;
+    const rock=new THREE.Mesh(rockGeometries[(i+1)%rockGeometries.length],rockMat);
+    rock.scale.set(9+Math.random()*8,h,8+Math.random()*7);
+    addRoadside(rock,px,h*.4,pz,yaw+(Math.random()-.5)*.15);
     if(i%2===0){
-     const treeH=5+Math.random()*5;
-     addRoadside(new THREE.Mesh(new THREE.ConeGeometry(2.7,treeH,7),pineMat),px+side*9,treeH/2,pz);
+     const treeH=6+Math.random()*7;
+     addRoadside(new THREE.Mesh(new THREE.CylinderGeometry(.18,.5,treeH*.42,8),trunkMat),px+side*9,treeH*.21,pz);
+     addRoadside(new THREE.Mesh(new THREE.ConeGeometry(3.4,treeH,9),pineMat),px+side*9,treeH*.72,pz,yaw);
+    }
+    if(i%4===0){
+     const ridge=new THREE.Mesh(hillGeometries[(i+1)%hillGeometries.length],rockMat);
+     ridge.scale.set(34+Math.random()*18,18+Math.random()*9,30+Math.random()*18);
+     addRoadside(ridge,px+side*18,9,pz+side*12,yaw);
     }
    }else{
     // Grand Prix: pagar lintasan dan tribun teratur, tanpa gedung/pohon acak.
