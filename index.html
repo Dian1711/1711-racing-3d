@@ -77,13 +77,13 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
     <h1>1711 RACING 3D</h1>
     <p>Pilih sirkuit, tunggu hitungan mundur, lalu pacu mobil sampai garis FINISH. Tidak ada sistem putaran.</p>
     <select id="trackSelect" aria-label="Pilih sirkuit">
-      <option value="0">1. City Sprint — 450 m</option>
-      <option value="1">2. Sunset Run — 700 m</option>
-      <option value="2">3. Forest Dash — 950 m</option>
-      <option value="3">4. Desert Highway — 1.200 m</option>
-      <option value="4">5. Coastal Express — 1.450 m</option>
-      <option value="5">6. Night Racer — 1.700 m</option>
-      <option value="6">7. Grand Prix — 1.900 m</option>
+      <option value="0">1. City Grand Tour — 7,6 km · Kota</option>
+      <option value="1">2. Sunset Canyon — 8 km · Ngarai</option>
+      <option value="2">3. Emerald Forest — 8,4 km · Hutan</option>
+      <option value="3">4. Desert Serpent — 8,8 km · Gurun</option>
+      <option value="4">5. Azure Coastline — 9,2 km · Pesisir</option>
+      <option value="5">6. Midnight Mountain — 9,6 km · Pegunungan</option>
+      <option value="6">7. World Grand Prix — 10 km · Sirkuit</option>
     </select>
     <button id="start">MULAI BALAPAN</button>
     <p>W / ↑ Gas · S Mundur · ↓ Rem · A/D Belok · Shift / X Nitro</p>
@@ -816,13 +816,13 @@ let nitro=100,nitroActive=false;
 let running=false,playerFinished=false,raceOver=false,countdownActive=false,countdownValue=0,countdownTimer=0;
 let speed=0,heading=Math.PI/2;
 const trackOptions=[
- {name:'City Sprint',distance:450,sky:0x9bc5df,road:0x343b43,grass:0x5c8749},
- {name:'Sunset Run',distance:700,sky:0xf0a16d,road:0x494044,grass:0x8b7146},
- {name:'Forest Dash',distance:950,sky:0x9ac6b0,road:0x303a36,grass:0x426b3e},
- {name:'Desert Highway',distance:1200,sky:0xe9c58c,road:0x51483e,grass:0xa18b55},
- {name:'Coastal Express',distance:1450,sky:0x8fd4e8,road:0x3a4650,grass:0x6b9b72},
- {name:'Night Racer',distance:1700,sky:0x111c36,road:0x252a35,grass:0x233d34},
- {name:'Grand Prix',distance:1900,sky:0xb9c7e7,road:0x303642,grass:0x507647}
+ {name:'City Grand Tour',distance:7600,sky:0x9bc5df,road:0x343b43,grass:0x5c8749,curve:42,bends:3,scene:'city'},
+ {name:'Sunset Canyon',distance:8000,sky:0xf0a16d,road:0x494044,grass:0x8b7146,curve:76,bends:4,scene:'canyon'},
+ {name:'Emerald Forest',distance:8400,sky:0x9ac6b0,road:0x303a36,grass:0x426b3e,curve:95,bends:5,scene:'forest'},
+ {name:'Desert Serpent',distance:8800,sky:0xe9c58c,road:0x51483e,grass:0xa18b55,curve:115,bends:6,scene:'desert'},
+ {name:'Azure Coastline',distance:9200,sky:0x8fd4e8,road:0x3a4650,grass:0x6b9b72,curve:82,bends:5,scene:'coast'},
+ {name:'Midnight Mountain',distance:9600,sky:0x111c36,road:0x252a35,grass:0x233d34,curve:132,bends:7,scene:'mountain'},
+ {name:'World Grand Prix',distance:10000,sky:0xb9c7e7,road:0x303642,grass:0x507647,curve:108,bends:6,scene:'grandprix'}
 ];
 let selectedTrack=0;
 const START_LINE_X=-900;
@@ -967,6 +967,116 @@ function updateSound(dt=1/60){
  }
 }
 
+// Dunia sirkuit dipasang ulang setiap memilih trek: jalan berkelok, lingkungan, dan gapura start/finish.
+let generatedTrackGroup=null;
+let legacyWorldHidden=false;
+function routeCenter(x,track=trackOptions[selectedTrack]){
+ const s=THREE.MathUtils.clamp((x-START_LINE_X)/track.distance,0,1);
+ const fade=Math.sin(Math.PI*s);
+ return fade*track.curve*(Math.sin(s*Math.PI*track.bends)+.24*Math.sin(s*Math.PI*(track.bends*2+1)));
+}
+function routeSlope(x,track=trackOptions[selectedTrack]){
+ const d=2, a=routeCenter(x-d,track), b=routeCenter(x+d,track);
+ return (b-a)/(2*d);
+}
+function buildTrackWorld(track){
+ if(!legacyWorldHidden){
+  scene.children.slice().forEach(o=>{if(o.isMesh)o.visible=false;});
+  legacyWorldHidden=true;
+ }
+ if(generatedTrackGroup)scene.remove(generatedTrackGroup);
+ generatedTrackGroup=new THREE.Group();scene.add(generatedTrackGroup);
+ const add=(mesh)=>{mesh.receiveShadow=true;generatedTrackGroup.add(mesh);return mesh;};
+ const ground=new THREE.Mesh(new THREE.PlaneGeometry(track.distance+1400,1100),new THREE.MeshStandardMaterial({color:track.grass,roughness:1}));
+ ground.rotation.x=-Math.PI/2;ground.position.set(START_LINE_X+track.distance/2,-.34,0);add(ground);
+ const roadMaterial=new THREE.MeshStandardMaterial({color:track.road,roughness:.95});
+ const edgeMaterial=new THREE.MeshStandardMaterial({color:0xf2f0e8,roughness:.7});
+ const curbRed=new THREE.MeshStandardMaterial({color:0xe84232});
+ const curbWhite=new THREE.MeshStandardMaterial({color:0xf5f5ed});
+ const vertices=[],indices=[],edges=[],centerDashes=[];
+ const samples=Math.ceil(track.distance/8),halfWidth=13;
+ for(let i=0;i<=samples;i++){
+  const x=START_LINE_X+i/samples*track.distance,z=routeCenter(x,track);
+  vertices.push(x,-.08,z-halfWidth,x,-.08,z+halfWidth);
+  if(i<samples){const k=i*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}
+ }
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();add(new THREE.Mesh(geo,roadMaterial));
+ for(let i=0;i<=samples;i+=3){
+  const x=START_LINE_X+i/samples*track.distance,z=routeCenter(x,track),slope=routeSlope(x,track);
+  const yaw=Math.atan(slope);
+  for(const side of [-1,1]){
+   const stripe=new THREE.Mesh(new THREE.BoxGeometry(8,.035,.18),edgeMaterial);
+   stripe.position.set(x,.005,z+side*12.35);stripe.rotation.y=-yaw;add(stripe);
+   if(i%6===0){
+    const curb=new THREE.Mesh(new THREE.BoxGeometry(7,.16,.7),(Math.floor(i/3)%2===0?curbRed:curbWhite));
+    curb.position.set(x,.015,z+side*13.25);curb.rotation.y=-yaw;add(curb);
+   }
+  }
+  if(i%6===0){
+   const dash=new THREE.Mesh(new THREE.BoxGeometry(3.5,.025,.20),edgeMaterial);
+   dash.position.set(x,.006,z);dash.rotation.y=-yaw;add(dash);
+  }
+ }
+ // Gerbang kotak-kotak hitam putih yang tinggi dan mudah terlihat dari kejauhan.
+ const black=new THREE.MeshStandardMaterial({color:0x101114,roughness:.65});
+ const white=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.55});
+ function gate(x,label){
+  const z=routeCenter(x,track),yaw=-Math.atan(routeSlope(x,track));
+  for(const side of [-1,1]){
+   const post=new THREE.Mesh(new THREE.BoxGeometry(1.05,9,1.05),black);
+   post.position.set(x,4.5,z+side*13.1);post.rotation.y=yaw;add(post);
+   for(let row=0;row<9;row++){
+    const panel=new THREE.Mesh(new THREE.BoxGeometry(1.08,.95,1.08),row%2?white:black);
+    panel.position.set(x,1+row*.95,z+side*13.1);panel.rotation.y=yaw;add(panel);
+   }
+  }
+  for(let i=0;i<18;i++){
+   const beam=new THREE.Mesh(new THREE.BoxGeometry(1.0,1.0,1.25),i%2?white:black);
+   beam.position.set(x,9.1,z-12.5+i*(25/17));beam.rotation.y=yaw;add(beam);
+  }
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(.38,1.15,7.5),black);
+  sign.position.set(x,10.5,z);sign.rotation.y=yaw;add(sign);
+  // Tulisan dibuat sebagai papan kontras; papan besar tetap terbaca dari jarak jauh.
+  const labelBoard=new THREE.Mesh(new THREE.BoxGeometry(.28,1.1,8),white);
+  labelBoard.position.set(x,10.5,z);labelBoard.rotation.y=yaw;add(labelBoard);
+  const labelBar=new THREE.Mesh(new THREE.BoxGeometry(.34,.22,6.5),black);
+  labelBar.position.set(x,10.5,z);labelBar.rotation.y=yaw;add(labelBar);
+  const tiles=[];
+  for(let i=0;i<20;i++){
+   const tile=new THREE.Mesh(new THREE.BoxGeometry(.16,.035,1.3),(i%2===0?white:black));
+   tile.position.set(x,.035,z-12.35+i*1.3);tile.rotation.y=yaw;add(tile);tiles.push(tile);
+  }
+ }
+ gate(START_LINE_X,'START');gate(START_LINE_X+track.distance,'FINISH');
+ // Siluet khas tiap lokasi agar pilihan trek terasa berbeda, bukan sekadar beda warna.
+ const trunkMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0x786044:0x5a4028});
+ const leafMat=new THREE.MeshStandardMaterial({color:track.scene==='forest'?0x245b2e:0x387044});
+ const rockMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0xb78a50:track.scene==='mountain'?0x67717b:0x778a83});
+ const buildingMat=new THREE.MeshStandardMaterial({color:0x8a9ba8,roughness:.85});
+ for(let i=0;i<Math.floor(track.distance/95);i++){
+  const x=START_LINE_X+45+i*95;
+  const z=routeCenter(x,track);
+  for(const side of [-1,1]){
+   const sideZ=z+side*(28+Math.random()*24);
+   if(track.scene==='city'||track.scene==='grandprix'){
+    const h=10+Math.random()*35;
+    const b=new THREE.Mesh(new THREE.BoxGeometry(12+Math.random()*14,h,12+Math.random()*12),buildingMat);
+    b.position.set(x,h/2,sideZ);add(b);
+   }else if(track.scene==='desert'||track.scene==='canyon'||track.scene==='mountain'){
+    const h=8+Math.random()*30;
+    const rock=new THREE.Mesh(new THREE.ConeGeometry(7+Math.random()*10,h,5),rockMat);
+    rock.position.set(x,h/2,sideZ);rock.rotation.z=(Math.random()-.5)*.3;add(rock);
+   }else{
+    const h=track.scene==='coast'?3+Math.random()*4:7+Math.random()*9;
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.25,.4,h,6),trunkMat);
+    trunk.position.set(x,h/2,sideZ);add(trunk);
+    const crown=new THREE.Mesh(new THREE.ConeGeometry(track.scene==='coast'?2.2:3.2,h*.75,7),leafMat);
+    crown.position.set(x,h+1,sideZ);add(crown);
+   }
+  }
+ }
+}
+
 function finishRace(){
  if(raceOver)return;
  raceOver=true;running=false;playerFinished=true;speed=0;nitroActive=false;
@@ -982,12 +1092,10 @@ function startGame(){
  const track=trackOptions[selectedTrack];
  finishLineX=START_LINE_X+track.distance;
  scene.background.setHex(track.sky);scene.fog.color.setHex(track.sky);
- roadMat.color.setHex(track.road);testGround.material.color.setHex(track.grass);
- raceLineObjects.forEach(o=>scene.remove(o));raceLineObjects.length=0;
- makeRaceLine(START_LINE_X);makeRaceLine(finishLineX);
+ buildTrackWorld(track);
  document.querySelector('.brand').innerHTML='1711 <span>RACING</span>';
  document.querySelector('.small').textContent=track.name.toUpperCase();
- document.getElementById('hint').textContent=track.name+' — capai garis FINISH!';
+ document.getElementById('hint').textContent=track.name+' — '+(track.distance/1000).toFixed(1)+' km, ikuti tikungan sampai FINISH!';
  speed=0;nitro=100;nitroActive=false;heading=Math.PI/2;steeringInput=0;
  playerProgress=0;lastAngle=0;elapsed=0;running=false;playerFinished=false;raceOver=false;
  countdownActive=true;countdownValue=3;countdownTimer=0;
@@ -1094,6 +1202,9 @@ function updatePlayer(dt){
   const steeringResponse=0.28+speedFraction*0.72;
   heading-=steeringInput*turnRate*dt*steeringResponse*reverseFactor;
  }
+ // Arah mobil mengikuti tikungan sirkuit, sementara input setir tetap mengatur posisi di lintasan.
+ const curveHeading=Math.atan(routeSlope(player.position.x,trackOptions[selectedTrack]));
+ heading+=angleDifference(curveHeading,heading)*Math.min(1,dt*(1.2+speedFraction*1.2));
  // Body roll ringan dan lembut mengikuti setir yang sudah dihaluskan.
  const targetRoll=-steeringInput*speedFraction*0.035;
  player.rotation.z+=(targetRoll-player.rotation.z)*(1-Math.exp(-dt*3.2));
@@ -1111,24 +1222,13 @@ function updatePlayer(dt){
  // Tepi jalan tidak memantulkan mobil: tetap di tepi, lalu belokkan arah secara perlahan ke dalam.
  edgeCollisionCooldown=Math.max(0,edgeCollisionCooldown-dt);
  const safeEdge=11.35;
- if(player.position.z>safeEdge){
-  player.position.z=safeEdge;
-  if(speed*Math.cos(heading)>0){
-   const inwardHeading=Math.atan2(Math.sin(heading),-Math.max(.12,Math.abs(Math.cos(heading))));
-   heading+=angleDifference(inwardHeading,heading)*Math.min(1,dt*2.2);
-   speed*=Math.exp(-.16*dt);
-   steeringInput*=Math.exp(-1.8*dt);
-   nitroActive=false;keys.nitro=false;
-  }
- }else if(player.position.z< -safeEdge){
-  player.position.z=-safeEdge;
-  if(speed*Math.cos(heading)<0){
-   const inwardHeading=Math.atan2(Math.sin(heading),Math.max(.12,Math.abs(Math.cos(heading))));
-   heading+=angleDifference(inwardHeading,heading)*Math.min(1,dt*2.2);
-   speed*=Math.exp(-.16*dt);
-   steeringInput*=Math.exp(-1.8*dt);
-   nitroActive=false;keys.nitro=false;
-  }
+ const roadCenter=routeCenter(player.position.x,trackOptions[selectedTrack]);
+ const lateral=player.position.z-roadCenter;
+ if(lateral>safeEdge||lateral< -safeEdge){
+  player.position.z=roadCenter+THREE.MathUtils.clamp(lateral,-safeEdge,safeEdge);
+  speed*=Math.exp(-.16*dt);
+  steeringInput*=Math.exp(-1.8*dt);
+  nitroActive=false;keys.nitro=false;
  }
 
  // Mode sirkuit kota: uji akselerasi tetap aktif, AI masih nonaktif.
