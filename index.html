@@ -392,7 +392,43 @@ function forwardFromHeading(h){
  return new THREE.Vector3(Math.sin(h),0,Math.cos(h));
 }
 
-const player=createCar(0xd92724);
+// MODE UJI LURUS: sembunyikan sirkuit oval dan lingkungan lama, lalu buat jalan lurus panjang.
+scene.children.forEach(obj=>{obj.visible=false;});
+scene.background=new THREE.Color(0x9bc5df);
+scene.fog=new THREE.Fog(0x9bc5df,260,950);
+scene.add(new THREE.HemisphereLight(0xe3f3ff,0x4d6345,2));
+const testSun=new THREE.DirectionalLight(0xffffff,2);
+testSun.position.set(-80,120,50);scene.add(testSun);
+const testGround=new THREE.Mesh(new THREE.PlaneGeometry(2200,700),grassMat);
+testGround.rotation.x=-Math.PI/2;testGround.position.y=-.3;testGround.visible=true;scene.add(testGround);
+const testRoad=new THREE.Mesh(new THREE.PlaneGeometry(2200,26),roadMat);
+testRoad.rotation.x=-Math.PI/2;testRoad.position.set(0,-.08,0);scene.add(testRoad);
+for(const z of [-13.4,13.4]){
+ const edge=new THREE.Mesh(new THREE.BoxGeometry(2200,.18,.45),whiteMat);
+ edge.position.set(0,.02,z);scene.add(edge);
+ const barrier=new THREE.Mesh(new THREE.BoxGeometry(2200,.7,.35),mat(0xb8c1c8));
+ barrier.position.set(0,.42,z+(z<0?-.8:.8));scene.add(barrier);
+}
+for(let x=-1080;x<1100;x+=24){
+ const dash=new THREE.Mesh(new THREE.BoxGeometry(10,.035,.22),mat(0xd7d8d7));
+ dash.position.set(x,.01,0);scene.add(dash);
+}
+for(let x=-1000;x<=1000;x+=65){
+ for(const z of [-27,27]){
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.25,.38,2.2,6),trunkMat);
+  trunk.position.set(x,1.1,z);scene.add(trunk);
+  const crown=new THREE.Mesh(new THREE.ConeGeometry(1.5,3.8,7),leavesMat);
+  crown.position.set(x,3.6,z);scene.add(crown);
+ }
+}
+document.querySelector('.brand').innerHTML='1711 <span>STRAIGHT TEST</span>';
+document.querySelector('.small').textContent='ACCELERATION TEST';
+document.getElementById('lap').textContent='TEST';
+document.querySelector('#lap + span').textContent='MODE';
+document.getElementById('position').textContent='—';
+document.querySelector('#position + span').textContent='AI OFF';
+document.getElementById('hint').textContent='Jalan lurus untuk menguji akselerasi, kecepatan dan nitro';
+
 const ai=[
  {car:createCar(0x2476d2),progress:.13,speed:.31,lane:-3,targetLane:-3,finished:false,name:'Biru'},
  {car:createCar(0xf2c230),progress:.25,speed:.34,lane:0,targetLane:0,finished:false,name:'Kuning'},
@@ -578,10 +614,12 @@ function startGame(){
  playerFinished=false;
  raceOver=false;
 
- player.position.set(0,0,RZ);
+ player.position.set(-900,0,0);
+ heading=Math.PI/2;
  player.rotation.y=heading+Math.PI;
 
  ai.forEach((a,i)=>{
+  a.car.visible=false;
   a.progress=[.13,.25,.37][i];
   a.speed=[.31,.34,.32][i];
   a.lane=[-3,0,3][i];
@@ -653,7 +691,7 @@ function updatePlayer(dt){
  // Gas dan mundur tidak aktif bersamaan.
  if(keys.gas&&!keys.reverse){
   // Akselerasi bertahap agar speedometer naik progresif hingga 300 km/jam.
-  speed+=12*dt;
+  speed+=6*dt;
  }else if(keys.reverse&&!keys.gas){
   speed-=12*dt;
  }else if(!keys.brake){
@@ -667,7 +705,7 @@ function updatePlayer(dt){
  }
 
  nitroActive=keys.nitro&&keys.gas&&nitro>0&&speed>2;
- if(nitroActive){nitro=Math.max(0,nitro-24*dt);speed+=22*dt;}
+ if(nitroActive){nitro=Math.max(0,nitro-24*dt);speed+=11*dt;}
  else nitro=Math.min(100,nitro+8*dt);
  speed=THREE.MathUtils.clamp(speed,-MAX_REVERSE,nitroActive?NITRO_SPEED:MAX_SPEED);
  player.userData.nitroFlames.forEach(f=>{f.visible=nitroActive; if(nitroActive)f.scale.setScalar(.75+Math.random()*.7);});
@@ -685,28 +723,16 @@ function updatePlayer(dt){
 
 
  // Perlambat saat keluar lintasan.
- const dist=trackDistance(player.position);
+ const dist=Math.abs(player.position.z);
  if(dist>ROAD/2-1){
   speed*=Math.max(.94,1-(dist-ROAD/2+1)*.025);
  }
 
- // Hitung kemajuan balapan hanya saat berada dekat lintasan.
- const angle=trackAngle(player.position);
- const delta=angleDifference(angle,lastAngle);
-
- if(dist<ROAD/2+2&&delta>0&&delta<.22){
-  playerProgress+=delta;
- }
- lastAngle=angle;
-
- if(playerProgress>=FINISH_PROGRESS&&!playerFinished){
-  playerProgress=FINISH_PROGRESS;
-  playerFinished=true;
-  finishRace('Kamu');
- }
+ // Mode tes lurus: tidak menghitung putaran atau garis finis.
 }
 
 function updateAI(dt){
+ return; // Mode tes lurus tanpa lawan AI.
  for(let i=0;i<ai.length;i++){
   const a=ai[i];
   if(a.finished)continue;
