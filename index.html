@@ -390,15 +390,12 @@ function createCar(color){
  for(const x of [-.51,.51]){
   add(new THREE.BoxGeometry(.10,.30,.12),paint,[x,.99,1.02]);
  }
- // Behel belakang berwarna kuning metalik agar tegas terpisah dari bodi merah; batang penghubung tetap putih.
+ // Behel belakang dibuat bersih: palang dan kedua penyangga satu warna kuning metalik.
  const behelMetal=new THREE.MeshStandardMaterial({color:0xffd32a,metalness:.48,roughness:.28});
- const behelDark=mat(0x20252b,.35);
  for(const x of [-.76,.76]){
-  add(new THREE.BoxGeometry(.085,.27,.085),behelDark,[x,1.00,.76]);
-  add(new THREE.BoxGeometry(.052,.30,.052),white,[x*.84,.84,.78]);
+  add(new THREE.BoxGeometry(.075,.27,.075),behelMetal,[x,1.00,.76]);
  }
  add(new THREE.BoxGeometry(1.68,.095,.095),behelMetal,[0,1.14,.76]);
- add(new THREE.BoxGeometry(1.42,.026,.035),white,[0,1.202,.716]);
  // Sirip aerodinamis tengah (shark fin) mengalir dari kokpit ke sayap belakang.
  const finShape=new THREE.Shape();
  finShape.moveTo(-.48,.02);
