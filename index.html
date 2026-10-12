@@ -177,8 +177,8 @@ body.paused #controls{display:none}
     </div>
     <div id="analogSpeedo" aria-label="Analog speedometer">
       <svg viewBox="0 0 180 108" role="img" aria-label="Speed in kilometers per hour">
-        <path d="M18 88 A72 72 0 0 1 162 88" fill="none" stroke="#27313b" stroke-width="13" stroke-linecap="round"/>
-        <path d="M18 88 A72 72 0 0 1 162 88" fill="none" stroke="#ff5b35" stroke-width="3" stroke-linecap="round"/>
+        <path d="M18 88 A72 72 0 0 0 162 88" fill="none" stroke="#27313b" stroke-width="13" stroke-linecap="round"/>
+        <path d="M18 88 A72 72 0 0 0 162 88" fill="none" stroke="#ff5b35" stroke-width="3" stroke-linecap="round"/>
         <g id="speedTicks" stroke="#d9e2ea" stroke-width="2" stroke-linecap="round"></g>
         <g id="speedLabels" fill="#e7edf3" font-size="9" font-weight="700" text-anchor="middle"></g>
         <line id="speedNeedle" x1="90" y1="88" x2="90" y2="30" stroke="#ff4934" stroke-width="3.2" stroke-linecap="round" transform="rotate(-135 90 88)"/>
@@ -982,7 +982,7 @@ function updateHUD(){
  const analogValue=document.getElementById('analogSpeedValue');
  if(analogValue)analogValue.textContent=shownSpeed;
  const needle=document.getElementById('speedNeedle');
- if(needle)needle.setAttribute('transform','rotate('+(-135+Math.min(400,shownSpeed)/400*270)+' 90 88)');
+ if(needle)needle.setAttribute('transform','rotate('+(-90+Math.min(400,shownSpeed)/400*180)+' 90 88)');
  document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
  document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
 }
@@ -1416,7 +1416,7 @@ function buildSpeedometer(){
  const ticks=document.getElementById('speedTicks'),labels=document.getElementById('speedLabels');
  if(!ticks||!labels||ticks.childElementCount)return;
  for(let i=0;i<=20;i++){
-  const angle=(-135+i*13.5)*Math.PI/180;
+  const angle=(-180+i*9)*Math.PI/180;
   const major=i%4===0;
   const r1=major?59:64,r2=70;
   const x1=90+Math.cos(angle)*r1,y1=88+Math.sin(angle)*r1;
