@@ -1451,10 +1451,12 @@ function startGame(){
  try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});}catch{}
  countdownActive=true;countdownValue=3;countdownTimer=0;
  player.position.set(START_LINE_X,0,routeCenter(START_LINE_X,track));player.rotation.y=heading+Math.PI;
+ // Setiap mobil mendapat jalur acak saat muncul: kiri, tengah, atau kanan.
+ const spawnLanes=[-5.2,0,5.2].sort(()=>Math.random()-.5);
  ai.forEach((a,i)=>{
   a.progress=START_LINE_X+[95,185,275][i];
   a.speed=[27,33,30][i];
-  a.lane=[-5.2,5.2,-5.2][i];
+  a.lane=spawnLanes[i];
   a.targetLane=a.lane;
   a.finished=false;
   a.car.visible=true;
@@ -1701,20 +1703,15 @@ function placeTrafficCar(a,track){
 }
 function updateAI(dt){
  const track=trackOptions[selectedTrack];
- // Rintangan menetap di jalur masing-masing: kiri, kanan, lalu kiri.
- // Setelah pemain melewatinya, mobil muncul lagi di depan dengan jarak terpisah.
- const fixedLanes=[-5.2,5.2,-5.2];
- const respawnGaps=[95,185,275];
+ // Mobil tetap pada jalurnya saat melaju; jalur diacak hanya ketika spawn ulang.
+ const availableLanes=[-5.2,0,5.2]; // kiri, tengah, kanan
  for(let i=0;i<ai.length;i++){
   const a=ai[i];
-  a.lane=fixedLanes[i];
-  a.targetLane=a.lane;
   a.speed=[27,33,30][i];
-  if(a.progress<player.position.x-18){
-   a.progress=player.position.x+respawnGaps[i];
-  }
-  if(a.progress>finishLineX-8){
-   a.progress=player.position.x+respawnGaps[i];
+  if(a.progress<player.position.x-18 || a.progress>finishLineX-8){
+   a.progress=player.position.x+[95,185,275][i]+Math.random()*55;
+   a.lane=availableLanes[Math.floor(Math.random()*availableLanes.length)];
+   a.targetLane=a.lane;
   }
   a.progress+=a.speed*dt;
   placeTrafficCar(a,track);
