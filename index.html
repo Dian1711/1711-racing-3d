@@ -166,6 +166,44 @@ body.paused #controls{display:none}
  .ctrl.nitro small{font-size:8px}
  .accelerator-stack{gap:3px}
 }
+
+/* Mobile fixes: make circuit list scrollable, keep HUD away from controls, improve touch response. */
+#message:not(.home-menu){
+ touch-action:pan-y;
+ overscroll-behavior:contain;
+ -webkit-overflow-scrolling:touch;
+}
+#message .track-grid,
+#message .track-card{touch-action:pan-y}
+#message .track-grid{padding-bottom:8px}
+#minimap{width:118px;opacity:.94}
+.topbar .stats{top:94px;right:10px;gap:5px}
+.topbar .stats .stat,
+.topbar .stats .stat:last-child{min-width:72px;padding:5px 8px}
+.topbar .stats .stat strong,
+.topbar .stats .stat:last-child strong{font-size:18px}
+@media(max-width:520px){
+ #message:not(.home-menu){max-height:82dvh;overflow-y:auto;overscroll-behavior:contain}
+ #message .track-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding-bottom:12px}
+ #message .track-card{min-height:62px;padding:8px}
+ #minimap{width:94px;top:6px;right:6px;padding:4px 5px}
+ #minimap svg{margin-top:1px}
+ .mapLabel{font-size:7px;letter-spacing:1px}
+ .mapLegend{font-size:6px}
+ .topbar .stats{top:75px;right:6px;gap:3px}
+ .topbar .stats .stat,
+ .topbar .stats .stat:last-child{min-width:60px;padding:4px 6px}
+ .topbar .stats .stat strong,
+ .topbar .stats .stat:last-child strong{font-size:15px}
+ .topbar .stats .stat span{font-size:6px}
+ #controls{bottom:max(12px,env(safe-area-inset-bottom));}
+ #controls .steering-group{gap:8px}
+ #controls .steering-group .ctrl{width:48px;height:52px}
+ #controls .accelerator-stack{gap:4px}
+ .ctrl.nitro{width:42px;height:43px}
+ #nitroWrap{height:48px}
+}
+
 </style>
 </head>
 <body>
@@ -238,9 +276,8 @@ scene.fog=new THREE.Fog(0x9bc5df,170,430);
 const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,1200);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.65));
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.05;
@@ -1535,7 +1572,7 @@ function showPauseMenu(){
 }
 function applyGraphicsQuality(value){
  graphicsQuality=value==='low'?'low':'high';
- renderer.setPixelRatio(Math.min(devicePixelRatio,graphicsQuality==='high'?1.65:1));
+ renderer.setPixelRatio(Math.min(devicePixelRatio,graphicsQuality==='high'?2:1));
  renderer.shadowMap.enabled=graphicsQuality==='high';
 }
 message.addEventListener('click',e=>{
@@ -1646,18 +1683,18 @@ function updatePlayer(dt){
 
  const steering=(keys.right?1:0)-(keys.left?1:0);
  const speedFraction=Math.min(1,Math.abs(speed)/MAX_SPEED);
- // Input setir naik/turun secara bertahap agar mobil tidak langsung menyentak.
- const steeringSmooth=1-Math.exp(-dt*3.2);
+ // Respons setir lebih cepat di layar sentuh, dengan sedikit smoothing agar tidak menyentak.
+ const steeringSmooth=1-Math.exp(-dt*10);
  steeringInput+=(steering-steeringInput)*steeringSmooth;
  if(Math.abs(speed)>.3){
   const reverseFactor=speed>=0?1:-1;
-  const turnRate=1.35;
-  const steeringResponse=0.28+speedFraction*0.72;
+  const turnRate=2.05;
+  const steeringResponse=0.42+speedFraction*0.78;
   heading-=steeringInput*turnRate*dt*steeringResponse*reverseFactor;
  }
- // Arah mobil mengikuti tikungan sirkuit, sementara input setir tetap mengatur posisi di lintasan.
+ // Bantuan mengikuti tikungan dikurangi agar input pemain tidak terasa terlambat atau dilawan.
  const curveHeading=Math.atan2(1,routeSlope(player.position.x,trackOptions[selectedTrack]));
- heading+=angleDifference(curveHeading,heading)*Math.min(1,dt*(1.2+speedFraction*1.2));
+ heading+=angleDifference(curveHeading,heading)*Math.min(1,dt*(0.48+speedFraction*0.38));
  // Body roll ringan dan lembut mengikuti setir yang sudah dihaluskan.
  const targetRoll=-steeringInput*speedFraction*0.035;
  player.rotation.z+=(targetRoll-player.rotation.z)*(1-Math.exp(-dt*3.2));
@@ -1793,7 +1830,7 @@ addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;
  camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);
- renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+ renderer.setPixelRatio(Math.min(devicePixelRatio,graphicsQuality==='high'?2:1));
 });
 </script>
 </body>
