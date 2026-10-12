@@ -429,6 +429,10 @@ document.getElementById('position').textContent='—';
 document.querySelector('#position + span').textContent='AI OFF';
 document.getElementById('hint').textContent='Jalan lurus untuk menguji akselerasi, kecepatan dan nitro';
 
+const player=createCar(0xd92724);
+player.position.set(-900,0,0);
+player.rotation.y=Math.PI/2+Math.PI;
+
 const ai=[
  {car:createCar(0x2476d2),progress:.13,speed:.31,lane:-3,targetLane:-3,finished:false,name:'Biru'},
  {car:createCar(0xf2c230),progress:.25,speed:.34,lane:0,targetLane:0,finished:false,name:'Kuning'},
