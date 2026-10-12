@@ -319,107 +319,80 @@ for(let i=0;i<6;i++){
 
 function createCar(color){
  const g=new THREE.Group();
- const paint=new THREE.MeshPhysicalMaterial({color,roughness:.24,metalness:.32,clearcoat:1,clearcoatRoughness:.18});
- const darkPaint=new THREE.MeshStandardMaterial({color:0x171b20,roughness:.42,metalness:.25});
- const rubber=new THREE.MeshStandardMaterial({color:0x111214,roughness:.88});
- const rim=new THREE.MeshStandardMaterial({color:0xb9c2c8,roughness:.25,metalness:.82});
- const glass=new THREE.MeshPhysicalMaterial({color:0x203c4b,roughness:.12,metalness:.2,transparent:true,opacity:.9,clearcoat:1});
- const headlamp=new THREE.MeshStandardMaterial({color:0xfff5dc,emissive:0xffdca0,emissiveIntensity:1.1});
- const taillamp=new THREE.MeshStandardMaterial({color:0xf20d18,emissive:0xb90000,emissiveIntensity:.8});
+ const paint=new THREE.MeshPhysicalMaterial({color,roughness:.28,metalness:.24,clearcoat:1,clearcoatRoughness:.2});
+ const dark=new THREE.MeshStandardMaterial({color:0x171a1e,roughness:.48,metalness:.2});
+ const rubber=new THREE.MeshStandardMaterial({color:0x101113,roughness:.92});
+ const rim=new THREE.MeshStandardMaterial({color:0xaeb8bf,roughness:.28,metalness:.8});
+ const glass=new THREE.MeshPhysicalMaterial({color:0x172c38,roughness:.16,metalness:.15,clearcoat:1});
+ const white=new THREE.MeshStandardMaterial({color:0xf1f1e8,roughness:.45});
+ const redLamp=new THREE.MeshStandardMaterial({color:0xff2020,emissive:0x9d0000,emissiveIntensity:.7});
  const add=(geo,material,pos,scale,rot)=>{
   const m=new THREE.Mesh(geo,material);m.position.set(...pos);
   if(scale)m.scale.set(...scale);if(rot)m.rotation.set(...rot);
   m.castShadow=true;m.receiveShadow=true;g.add(m);return m;
  };
- // Mesh bodi dibuat dari penampang melintang yang berubah sepanjang mobil.
- // Hasilnya memiliki hidung rendah, bahu roda, dan buritan yang lebih mirip mobil sport.
- const sections=[
-  [-1.88,.48,.66,.54],[-1.65,.57,.88,.68],[-1.22,.70,.94,.72],
-  [-.65,.74,.91,.70],[.20,.72,.91,.69],[.88,.67,.89,.66],
-  [1.42,.61,.82,.61],[1.78,.53,.72,.53]
+ // Siluet stock-car NASCAR: bodi lebar dan rendah, hidung panjang, kabin sedan, spoiler belakang.
+ add(new THREE.BoxGeometry(1.78,.34,3.55),paint,[0,.61,0]);
+ add(new THREE.BoxGeometry(1.92,.23,2.12),paint,[0,.61,-.67]);
+ add(new THREE.BoxGeometry(1.82,.22,1.08),paint,[0,.58,1.20]);
+ add(new THREE.BoxGeometry(1.98,.14,.22),dark,[0,.43,-1.86]);
+ add(new THREE.BoxGeometry(1.96,.16,.20),dark,[0,.43,1.82]);
+ // Kap mesin dan garis panel.
+ add(new THREE.BoxGeometry(1.42,.035,1.18),paint,[0,.795,-1.02]);
+ add(new THREE.BoxGeometry(1.15,.035,.62),paint,[0,.725,1.12]);
+ // Kabin sedan dengan atap rendah dan kaca miring.
+ const cabinVerts=[
+  -.68,.76,-.72, .68,.76,-.72, -.53,1.20,-.28, .53,1.20,-.28,
+  -.53,1.20,-.28, .53,1.20,-.28, -.50,1.17,.53, .50,1.17,.53,
+  -.68,.76,-.72, -.53,1.20,-.28, -.50,1.17,.53, -.68,.75,.62,
+  .68,.76,-.72, .53,1.20,-.28, .50,1.17,.53, .68,.75,.62
  ];
- const verts=[],indices=[],rings=12;
- for(const [z,y,w,h] of sections){
-  for(let j=0;j<rings;j++){
-   const ang=(j/rings)*Math.PI*2;
-   const cs=Math.cos(ang),sn=Math.sin(ang);
-   // sisi tegak agak membulat, bagian atas dan bawah mengecil.
-   const x=w*Math.sign(cs)*Math.pow(Math.abs(cs),.72);
-   const yy=y+sn*h*.48;
-   verts.push(x,yy,z);
-  }
+ const cg=new THREE.BufferGeometry();
+ cg.setAttribute('position',new THREE.Float32BufferAttribute(cabinVerts,3));
+ cg.setIndex([0,1,2,1,3,2,4,5,6,5,7,6,8,9,10,8,10,11,12,14,13,12,15,14]);
+ cg.computeVertexNormals();add(cg,paint,[0,0,0]);
+ // Kaca depan/belakang dan kaca samping gelap.
+ const glassGeo=(arr,idx)=>{const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));if(idx)geo.setIndex(idx);geo.computeVertexNormals();return geo;};
+ add(glassGeo([-.57,.82,-.66,.57,.82,-.66,-.45,1.15,-.31,.57,.82,-.66,.45,1.15,-.31,-.45,1.15,-.31]),glass,[0,0,0]);
+ add(glassGeo([-.45,1.15,.50,.45,1.15,.50,-.58,.80,.63,.45,1.15,.50,.58,.80,.63,-.58,.80,.63]),glass,[0,0,0]);
+ for(const x of [-.70,.70]){
+  add(new THREE.BoxGeometry(.035,.29,.82),glass,[x,.96,.10],[1,1,1],[0,0,0]);
+  add(new THREE.BoxGeometry(.08,.12,2.35),dark,[x,.47,0]);
+  add(new THREE.BoxGeometry(.14,.13,.25),paint,[x*1.12,.92,-.45]);
  }
- for(let i=0;i<sections.length-1;i++)for(let j=0;j<rings;j++){
-  const p=i*rings+j,q=i*rings+(j+1)%rings;
-  indices.push(p,q,p+rings,q,q+rings,p+rings);
+ // Fender berisi di atas empat ban.
+ for(const x of [-.91,.91])for(const z of [-1.13,1.13]){
+  add(new THREE.SphereGeometry(1,20,12),paint,[x,.59,z],[.14,.23,.48]);
  }
- const bodyGeo=new THREE.BufferGeometry();
- bodyGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
- bodyGeo.setIndex(indices);bodyGeo.computeVertexNormals();
- add(bodyGeo,paint,[0,0,0]);
- // Sasis dan bumper tipis.
- add(new THREE.BoxGeometry(1.68,.19,3.25),darkPaint,[0,.48,0]);
- add(new THREE.BoxGeometry(1.84,.11,.20),darkPaint,[0,.43,-1.82]);
- add(new THREE.BoxGeometry(1.72,.12,.18),darkPaint,[0,.43,1.76]);
- // Kabin model coupe dengan bentuk trapesium dan kaca yang menyatu.
- const cabinGeo=new THREE.BufferGeometry();
- const cv=[
-  -.69,.78,-.73, .69,.78,-.73, -.53,1.31,-.23, .53,1.31,-.23,
-  -.53,1.31,-.23, .53,1.31,-.23, -.48,1.29,.53, .48,1.29,.53,
-  -.69,.78,-.73, -.53,1.31,-.23, -.48,1.29,.53, -.68,.77,.62,
-  .69,.78,-.73, .53,1.31,-.23, .48,1.29,.53, .68,.77,.62
- ];
- cabinGeo.setAttribute('position',new THREE.Float32BufferAttribute(cv,3));
- cabinGeo.setIndex([
-  0,1,2,1,3,2, 4,5,6,5,7,6,
-  8,9,10,8,10,11, 12,14,13,12,15,14
- ]);cabinGeo.computeVertexNormals();
- add(cabinGeo,darkPaint,[0,0,0]);
- // Atap dan kaca depan/belakang, dibuat sebagai bidang miring.
- add(new THREE.BoxGeometry(.88,.055,.64),paint,[0,1.30,.10],[1,1,1],[0,0,0]);
- const windshieldGeo=new THREE.BufferGeometry();
- windshieldGeo.setAttribute('position',new THREE.Float32BufferAttribute([
-  -.58,.83,-.69, .58,.83,-.69, -.45,1.24,-.27,
-  .58,.83,-.69, .45,1.24,-.27, -.45,1.24,-.27
- ],3));windshieldGeo.computeVertexNormals();
- add(windshieldGeo,glass,[0,0,0]);
- const rearGeo=new THREE.BufferGeometry();
- rearGeo.setAttribute('position',new THREE.Float32BufferAttribute([
-  -.45,1.24,.45, .45,1.24,.45, -.60,.80,.66,
-  .45,1.24,.45, .60,.80,.66, -.60,.80,.66
- ],3));rearGeo.computeVertexNormals();add(rearGeo,glass,[0,0,0]);
- // Fender halus mengikuti ban, side skirts, spion dan grille.
- for(const x of [-.91,.91]){
-  add(new THREE.SphereGeometry(1,24,16),paint,[x,.58,-1.15],[.15,.20,.48]);
-  add(new THREE.SphereGeometry(1,24,16),paint,[x,.58,1.15],[.15,.20,.48]);
-  add(new THREE.BoxGeometry(.09,.13,2.35),darkPaint,[x,.42,0]);
-  add(new THREE.SphereGeometry(1,16,10),paint,[x*1.02,.94,-.48],[.12,.08,.16]);
+ // Lampu depan, grille dan lampu belakang.
+ add(new THREE.BoxGeometry(.72,.12,.045),dark,[0,.57,-1.91]);
+ for(const x of [-.65,.65]){
+  add(new THREE.BoxGeometry(.32,.075,.045),white,[x,.69,-1.83]);
+  add(new THREE.BoxGeometry(.30,.08,.045),redLamp,[x,.66,1.82]);
  }
- add(new THREE.BoxGeometry(.60,.12,.045),darkPaint,[0,.56,-1.89]);
- for(const x of [-.64,.64]){
-  add(new THREE.BoxGeometry(.32,.075,.045),headlamp,[x,.72,-1.79]);
-  add(new THREE.BoxGeometry(.32,.075,.045),taillamp,[x,.67,1.78]);
- }
- // Spoiler kecil, tidak terlalu besar agar proporsi tetap seperti coupe.
- for(const x of [-.48,.48])add(new THREE.BoxGeometry(.045,.19,.05),darkPaint,[x,.91,1.54]);
- add(new THREE.BoxGeometry(1.48,.075,.20),paint,[0,1.02,1.57]);
- // Roda dan velg multi-jari.
+ // Spoiler NASCAR besar dengan dua penyangga.
+ for(const x of [-.57,.57])add(new THREE.BoxGeometry(.07,.30,.08),dark,[x,.91,1.56]);
+ add(new THREE.BoxGeometry(1.82,.09,.30),dark,[0,1.07,1.63]);
+ add(new THREE.BoxGeometry(1.72,.035,.23),paint,[0,1.13,1.63]);
+ // Nomor balap putih di pintu agar terbaca seperti stock car.
+ add(new THREE.BoxGeometry(.035,.23,.40),white,[-.723,.70,.25]);
+ add(new THREE.BoxGeometry(.035,.23,.40),white,[.723,.70,.25]);
  const wheels=[];
- for(const x of [-.94,.94])for(const z of [-1.16,1.16]){
+ for(const x of [-.94,.94])for(const z of [-1.13,1.13]){
   const w=new THREE.Group();
-  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.33,.33,.23,32),rubber);tire.rotation.z=Math.PI/2;w.add(tire);
-  const rimMesh=new THREE.Mesh(new THREE.CylinderGeometry(.225,.225,.245,24),rim);rimMesh.rotation.z=Math.PI/2;w.add(rimMesh);
-  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.26,16),darkPaint);hub.rotation.z=Math.PI/2;w.add(hub);
-  for(let k=0;k<10;k++){
-   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.022,.19,.028),rim);
-   spoke.position.set(x>0?.128:-.128,Math.sin(k*Math.PI/5)*.105,Math.cos(k*Math.PI/5)*.105);
-   spoke.rotation.x=k*Math.PI/5;w.add(spoke);
+  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.25,32),rubber);tire.rotation.z=Math.PI/2;w.add(tire);
+  const rimMesh=new THREE.Mesh(new THREE.CylinderGeometry(.225,.225,.265,24),rim);rimMesh.rotation.z=Math.PI/2;w.add(rimMesh);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.28,16),dark);hub.rotation.z=Math.PI/2;w.add(hub);
+  for(let k=0;k<8;k++){
+   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.025,.19,.035),rim);
+   spoke.position.set(x>0?.14:-.14,Math.sin(k*Math.PI/4)*.105,Math.cos(k*Math.PI/4)*.105);
+   spoke.rotation.x=k*Math.PI/4;w.add(spoke);
   }
-  w.position.set(x,.37,z);g.add(w);wheels.push(w);
+  w.position.set(x,.36,z);w.children.forEach(c=>{c.castShadow=true;c.receiveShadow=true;});g.add(w);wheels.push(w);
  }
  const nitroFlames=[];
  for(const x of [-.43,.43]){
-  add(new THREE.CylinderGeometry(.065,.08,.13,12),darkPaint,[x,.48,1.83],[1,1,1],[Math.PI/2,0,0]);
+  add(new THREE.CylinderGeometry(.065,.08,.13,12),dark,[x,.48,1.85],[1,1,1],[Math.PI/2,0,0]);
   const flame=new THREE.Mesh(new THREE.ConeGeometry(.10,.58,12),nitroGlowMat);
   flame.rotation.x=Math.PI/2;flame.position.set(x,.48,2.10);flame.visible=false;g.add(flame);nitroFlames.push(flame);
  }
@@ -475,50 +448,87 @@ for(let x=-1080;x<1100;x+=18){
  dash.rotation.x=-Math.PI/2;dash.position.set(x,-.012,0);scene.add(dash);
 }
 
-// Pepohonan dengan batang bercabang dan tajuk organik berlapis.
-const barkMat=mat(0x51402f),barkLight=mat(0x69513a);
-const foliageA=new THREE.MeshStandardMaterial({color:0x294c2d,roughness:1});
-const foliageB=new THREE.MeshStandardMaterial({color:0x365f35,roughness:1});
-const foliageC=new THREE.MeshStandardMaterial({color:0x426b3b,roughness:1});
-const foliageD=new THREE.MeshStandardMaterial({color:0x507541,roughness:1});
-function makeTree(x,z,s,seed){
- const treeGroup=new THREE.Group();treeGroup.position.set(x,0,z);treeGroup.scale.setScalar(s);
- const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.17,.31,3.5,12,3),barkMat);
- trunk.position.y=1.75;trunk.castShadow=true;treeGroup.add(trunk);
- // Cabang kayu yang membelah ke arah tajuk.
- for(let j=0;j<3;j++){
-  const branch=new THREE.Mesh(new THREE.CylinderGeometry(.055,.12,1.45,8),barkLight);
-  branch.position.set((j-1)*.28,2.65,.02);
-  branch.rotation.z=(j-1)*-.42;branch.rotation.x=(j-1)*.16;
-  branch.castShadow=true;treeGroup.add(branch);
+// Sirkuit jalan raya perkotaan: tembok pembatas kokoh dan gedung di kedua sisi.
+const concreteMat=mat(0x9aa3a8),concreteTop=mat(0xc4c9ca),barrierStripeRed=mat(0xd53b32);
+for(const side of [-1,1]){
+ const z=side*13.45;
+ // Pembatas beton kontinu di tepi lintasan, dibagi segmen agar detailnya tampak nyata.
+ for(let x=-1090;x<1100;x+=4){
+  const block=new THREE.Mesh(new THREE.BoxGeometry(3.9,.95,.62),Math.floor((x+1090)/4)%4===0?barrierStripeRed:concreteMat);
+  block.position.set(x,.47,z);block.castShadow=true;block.receiveShadow=true;scene.add(block);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(3.9,.09,.68),concreteTop);
+  cap.position.set(x,.99,z);scene.add(cap);
  }
- // Kelompok tajuk dengan geometri halus; variasi skala membuat siluet alami.
- const mats=[foliageA,foliageB,foliageC,foliageD];
- const crownCount=7;
- for(let i=0;i<crownCount;i++){
-  const angle=i*2.399+seed;
-  const radius=i===0?0:.65+((i*17)%5)*.09;
-  const size=.82+((i*13+seed*7)%5)*.075;
-  const crown=new THREE.Mesh(new THREE.SphereGeometry(size,18,14),mats[(i+seed)%mats.length]);
-  crown.position.set(Math.cos(angle)*radius,3.25+(i%3)*.42,Math.sin(angle)*radius*.72);
-  crown.scale.set(1.05,1.12,.92);crown.castShadow=true;crown.receiveShadow=true;treeGroup.add(crown);
+ // Pagar keselamatan di atas tembok beton.
+ for(let x=-1090;x<1100;x+=12){
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.10,1.0,.10),darkMat);
+  post.position.set(x,1.48,z);scene.add(post);
  }
- scene.add(treeGroup);
+ const fence=new THREE.Mesh(new THREE.BoxGeometry(2200,.07,.07),darkMat);
+ fence.position.set(0,1.92,z);scene.add(fence);
 }
-for(let x=-1030;x<=1030;x+=36){
+// Kota padat: gedung perkantoran, apartemen, dan toko dengan jendela berulang.
+const buildingMats=[mat(0x7c8991),mat(0xa7a7a0),mat(0x667985),mat(0xb4b0a6),mat(0x555f69),mat(0xc2c0b8)];
+const windowMats=[new THREE.MeshStandardMaterial({color:0x263e4b,roughness:.35,metalness:.2}),new THREE.MeshStandardMaterial({color:0x7899a8,roughness:.3,metalness:.15}),new THREE.MeshStandardMaterial({color:0xe0c58a,emissive:0x3a2c12,emissiveIntensity:.15})];
+const shopMats=[mat(0x25465b),mat(0x873f32),mat(0x3b6656),mat(0x6b526f)];
+function makeBuilding(x,side,index){
+ const width=12+Math.random()*13;
+ const depth=12+Math.random()*15;
+ const floors=3+Math.floor(Math.random()*11);
+ const height=floors*3.2;
+ const z=side*(25+depth/2+Math.random()*8);
+ const group=new THREE.Group();group.position.set(x,0,z);
+ const body=new THREE.Mesh(new THREE.BoxGeometry(width,height,depth),buildingMats[index%buildingMats.length]);
+ body.position.y=height/2;body.castShadow=true;body.receiveShadow=true;group.add(body);
+ // Atap, parapet, dan unit mekanis kecil di atas gedung.
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(width+.35,.28,depth+.35),mat(0x515b62));
+ roof.position.y=height+.12;group.add(roof);
+ if(index%3===0){
+  const unit=new THREE.Mesh(new THREE.BoxGeometry(width*.28,1.0,depth*.25),mat(0x777f83));
+  unit.position.set(width*.18,height+.7,0);group.add(unit);
+ }
+ // Jendela tersusun rapi pada fasad yang menghadap jalan.
+ const faceZ=-side*(depth/2+.025);
+ const cols=Math.max(2,Math.floor(width/2.4));
+ for(let floor=0;floor<floors;floor++){
+  for(let col=0;col<cols;col++){
+   const wx=-width/2+(col+.5)*width/cols;
+   const win=new THREE.Mesh(new THREE.BoxGeometry(Math.min(1.35,width/cols*.62),1.35,.07),windowMats[(index+floor+col)%windowMats.length]);
+   win.position.set(wx,1.15+floor*3.2,faceZ);group.add(win);
+  }
+ }
+ // Lantai dasar toko dengan kanopi warna-warni.
+ const shop=new THREE.Mesh(new THREE.BoxGeometry(width*.9,2.5,.16),shopMats[index%shopMats.length]);
+ shop.position.set(0,1.35,faceZ-side*.04);group.add(shop);
+ const awning=new THREE.Mesh(new THREE.BoxGeometry(width*1.02,.20,1.05),shopMats[(index+1)%shopMats.length]);
+ awning.position.set(0,2.8,faceZ-side*.48);group.add(awning);
+ scene.add(group);
+}
+let buildingIndex=0;
+for(let x=-1080;x<=1080;x+=34){
  for(const side of [-1,1]){
-  const z=side*(31+Math.random()*20);
-  const s=.85+Math.random()*.75;
-  makeTree(x+(Math.random()-.5)*12,z,s,Math.floor(Math.random()*4));
+  makeBuilding(x+(Math.random()-.5)*10,side,buildingIndex++);
  }
 }
-document.querySelector('.brand').innerHTML='1711 <span>STRAIGHT TEST</span>';
-document.querySelector('.small').textContent='ACCELERATION TEST';
+// Lampu jalan kota di antara tembok dan gedung.
+for(let x=-1060;x<=1060;x+=48){
+ for(const side of [-1,1]){
+  const z=side*16.2;
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.12,5.8,8),mat(0x414b52));
+  pole.position.set(x,2.9,z);pole.castShadow=true;scene.add(pole);
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(.95,.10,.10),mat(0x414b52));
+  arm.position.set(x,5.65,z-side*.38);scene.add(arm);
+  const lamp=new THREE.Mesh(new THREE.BoxGeometry(.40,.14,.32),new THREE.MeshBasicMaterial({color:0xffedbd}));
+  lamp.position.set(x,5.55,z-side*.75);scene.add(lamp);
+ }
+}
+document.querySelector('.brand').innerHTML='1711 <span>URBAN NASCAR</span>';
+document.querySelector('.small').textContent='CITY STREET CIRCUIT';
 document.getElementById('lap').textContent='TEST';
 document.querySelector('#lap + span').textContent='MODE';
 document.getElementById('position').textContent='—';
 document.querySelector('#position + span').textContent='AI OFF';
-document.getElementById('hint').textContent='Jalan lurus untuk menguji akselerasi, kecepatan dan nitro';
+document.getElementById('hint').textContent='Lintasan kota berpembatas beton — tetap di jalur!';
 
 const player=createCar(0xd92724);
 player.position.set(-900,0,0);
@@ -831,18 +841,20 @@ function updatePlayer(dt){
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*1.15);
 
 
- // Mode jalan lurus memakai jalan selebar 26 unit.
- // Jangan beri penalti ketika mobil masih berada di dalam jalan.
- const dist=Math.abs(player.position.z);
- const roadHalfWidth=13;
- const offRoadStart=roadHalfWidth-1.2;
- if(dist>offRoadStart){
-  // Perlambatan di luar jalan sangat bertahap, bukan seperti menginjak rem.
-  const offRoad=Math.min(1,(dist-offRoadStart)/3);
-  speed*=Math.exp(-offRoad*.18*dt);
+ // Pembatas fisik lintasan: mobil tidak bisa menembus tembok beton.
+ // Batas pusat mobil dibuat sedikit di dalam garis tepi agar bodi tidak menabrak tembok.
+ const safeEdge=11.55;
+ if(player.position.z>safeEdge){
+  player.position.z=safeEdge;
+  if(speed>0)speed*=.72;
+  steeringInput=Math.min(steeringInput,0);
+ }else if(player.position.z< -safeEdge){
+  player.position.z=-safeEdge;
+  if(speed>0)speed*=.72;
+  steeringInput=Math.max(steeringInput,0);
  }
 
- // Mode tes lurus: tidak menghitung putaran atau garis finis.
+ // Mode sirkuit kota: uji akselerasi tetap aktif, AI masih nonaktif.
 }
 
 function updateAI(dt){
