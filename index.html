@@ -449,8 +449,7 @@ const MAX_REVERSE=12;
 const message=document.getElementById('message');
 
 function updateHUD(){
- document.getElementById('lap').textContent=
-  Math.min(TOTAL_LAPS,Math.floor(playerProgress/TAU)+1)+'/'+TOTAL_LAPS;
+ document.getElementById('lap').textContent='TEST';
  document.getElementById('speed').textContent=Math.round(Math.abs(speed)*4.2);
  document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
  document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
@@ -460,8 +459,7 @@ function updateHUD(){
   ...ai.map(a=>({name:a.name,progress:a.progress,isPlayer:false}))
  ].sort((a,b)=>b.progress-a.progress);
 
- document.getElementById('position').textContent=
-  (ranks.findIndex(r=>r.isPlayer)+1)+'/4';
+ document.getElementById('position').textContent='—';
 }
 
 // Audio sintetis supercar V12: bass lebih tebal, makin meraung mengikuti kecepatan.
