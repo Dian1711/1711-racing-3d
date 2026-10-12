@@ -25,7 +25,10 @@ canvas{display:block}
 button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:800;padding:12px;cursor:pointer;touch-action:none}
 #message button{width:100%;margin-top:8px}
 #message .accent{color:#ff5b35}
+body:not(.racing):before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,rgba(5,8,12,.88),rgba(5,8,12,.48) 52%,rgba(5,8,12,.2)),linear-gradient(0deg,rgba(5,8,12,.8),transparent 58%)}
+#message:not(.home-menu){z-index:3}
 #message.home-menu{position:static;transform:none;width:100%;height:100%;max-width:none;padding:0;background:transparent;border:0;border-radius:0;pointer-events:none;overflow:visible}
+.home-brand,.home-actions,#message .gear-button{z-index:3}
 .home-brand{position:fixed;top:10%;left:7%;text-align:left;pointer-events:none;text-shadow:0 3px 18px #000}
 .home-brand h1{font-size:clamp(28px,5vw,58px)!important;letter-spacing:3px;margin:8px 0!important}
 .home-brand p{font-size:11px!important;letter-spacing:4px;color:#d0d7df!important;margin:0}
@@ -40,7 +43,6 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
 #controls .controlgroup:last-child{flex:0 0 auto}
 body:not(.racing) #analogSpeedo{display:none}
 body.racing .stats .stat:last-child{display:none}
-body.racing #position{display:none}
 body:not(.racing) .topbar{display:none}
 #message .secondary{background:#202833;border:1px solid #ffffff24}
 #message .track-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:12px}
