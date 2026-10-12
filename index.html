@@ -320,111 +320,73 @@ for(let i=0;i<6;i++){
 
 function createCar(color){
  const g=new THREE.Group();
- const paint=new THREE.MeshPhysicalMaterial({color,roughness:.24,metalness:.28,clearcoat:1,clearcoatRoughness:.16});
- const dark=new THREE.MeshStandardMaterial({color:0x14191e,roughness:.42,metalness:.25});
- const rubber=new THREE.MeshStandardMaterial({color:0x0c0d0f,roughness:.9});
- const rim=new THREE.MeshStandardMaterial({color:0xb9c2c9,roughness:.22,metalness:.86});
- const glass=new THREE.MeshPhysicalMaterial({color:0x142b3b,roughness:.12,metalness:.22,clearcoat:1});
- const light=new THREE.MeshStandardMaterial({color:0xfff3d4,emissive:0xffd59a,emissiveIntensity:.65});
- const tail=new THREE.MeshStandardMaterial({color:0xff1717,emissive:0xb60000,emissiveIntensity:.7});
+ const paint=new THREE.MeshStandardMaterial({color,roughness:.32,metalness:.16});
+ const dark=mat(0x171b20,.45),rubber=mat(0x101113,.92);
+ const rim=new THREE.MeshStandardMaterial({color:0xc4cbd1,metalness:.78,roughness:.28});
+ const glass=new THREE.MeshStandardMaterial({color:0x244353,metalness:.18,roughness:.2});
+ const white=mat(0xf5f0e5,.35);
  const add=(geo,material,pos,scale,rot)=>{
   const m=new THREE.Mesh(geo,material);m.position.set(...pos);
   if(scale)m.scale.set(...scale);if(rot)m.rotation.set(...rot);
   m.castShadow=true;m.receiveShadow=true;g.add(m);return m;
  };
- // Curved cross-section loft: body is rounded and tapered, not a stack of rectangular boxes.
- function loft(sections,material,segments=24){
-  const vertices=[],indices=[];
-  for(const s of sections){
-   const [z,y,w,h]=s;
-   for(let j=0;j<segments;j++){
-    const a=j/segments*Math.PI*2;
-    const cs=Math.cos(a),sn=Math.sin(a);
-    const x=w*Math.sign(cs)*Math.pow(Math.abs(cs),.62);
-    const yy=y+sn*h*.5;
-    vertices.push(x,yy,z);
-   }
-  }
-  for(let i=0;i<sections.length-1;i++)for(let j=0;j<segments;j++){
-   const a=i*segments+j,b=i*segments+(j+1)%segments,c=(i+1)*segments+j,d=(i+1)*segments+(j+1)%segments;
-   // Urutan vertex menghadap keluar agar permukaan bodi mendapat pencahayaan 3D yang benar.
-   indices.push(a,b,c,b,d,c);
-  }
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
-  geo.setIndex(indices);geo.computeVertexNormals();
-  const mesh=new THREE.Mesh(geo,material);mesh.castShadow=true;mesh.receiveShadow=true;g.add(mesh);return mesh;
- }
- loft([
-  [-1.98,.57,.62,.22],[-1.83,.62,.82,.34],[-1.55,.66,.91,.43],
-  [-1.15,.69,.96,.47],[-.70,.69,.96,.47],[-.20,.67,.94,.45],
-  [.35,.65,.92,.43],[.82,.63,.90,.40],[1.20,.61,.85,.37],
-  [1.58,.58,.77,.31],[1.84,.54,.62,.22]
- ],paint,32);
- // Sculpted hood and subtle panel lines.
- add(new THREE.BoxGeometry(1.36,.018,.83),dark,[0,.875,-1.12]);
- add(new THREE.BoxGeometry(1.20,.018,.44),paint,[0,.862,-1.08]);
- add(new THREE.BoxGeometry(1.52,.055,.045),dark,[0,.69,-1.84]);
- add(new THREE.BoxGeometry(1.58,.07,.06),dark,[0,.51,1.81]);
- // Tapered cabin formed as a separate rounded 3D shell.
- loft([
-  [-.94,.78,.69,.12],[-.70,.86,.68,.15],[-.38,1.08,.56,.15],
-  [-.12,1.20,.51,.13],[.42,1.19,.50,.13],[.72,1.04,.58,.13],
-  [.91,.79,.67,.12]
- ],paint,24);
- // Dark glazing on the front, rear and both sides follows the cabin slope.
- const pane=(pts)=>{const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));geo.computeVertexNormals();return add(geo,glass,[0,0,0]);};
- pane([-.53,.91,-.63,.53,.91,-.63,-.43,1.12,-.30,.53,.91,-.63,.43,1.12,-.30,-.43,1.12,-.30]);
- pane([-.43,1.12,.48,.43,1.12,.48,-.56,.88,.79,.43,1.12,.48,.56,.88,.79,-.56,.88,.79]);
- pane([-.65,.89,-.58,-.50,1.07,-.32,-.47,1.07,.43,-.65,.89,-.58,-.47,1.07,.43,-.62,.88,.70]);
- pane([.65,.89,-.58,.50,1.07,-.32,.47,1.07,.43,.65,.89,-.58,.47,1.07,.43,.62,.88,.70]);
- // Side skirts and flared wheel arches, layered to create depth.
+ // Bentuk stock car kotak seperti model awal; detail balap ditambahkan sebagai stiker.
+ add(new THREE.BoxGeometry(1.78,.43,3.45),paint,[0,.61,-.02]);
+ add(new THREE.BoxGeometry(1.68,.22,1.05),paint,[0,.76,-1.05]);
+ add(new THREE.BoxGeometry(1.70,.20,.72),paint,[0,.73,1.22]);
+ add(new THREE.BoxGeometry(1.84,.18,.20),dark,[0,.42,-1.78]);
+ add(new THREE.BoxGeometry(1.88,.20,.22),dark,[0,.42,1.76]);
+ add(new THREE.BoxGeometry(1.24,.48,1.48),paint,[0,.98,.10]);
+ add(new THREE.BoxGeometry(1.16,.035,.06),glass,[0,1.20,-.64],null,[.22,0,0]);
+ add(new THREE.BoxGeometry(1.16,.035,.06),glass,[0,1.20,.83],null,[-.22,0,0]);
+ for(const x of [-.64,.64]) add(new THREE.BoxGeometry(.035,.28,.58),glass,[x,1.02,.10]);
  for(const x of [-.88,.88]){
-  add(new THREE.BoxGeometry(.11,.15,2.48),dark,[x,.43,-.02]);
-  for(const z of [-1.13,1.13]){
-   // Lengkungan fender setengah lingkaran, bukan tonjolan bulat di atas ban.
-   const arch=new THREE.Mesh(new THREE.TorusGeometry(.405,.055,9,28,Math.PI),paint);
-   arch.rotation.y=Math.PI/2;
-   arch.position.set(x*1.015,.36,z);
-   arch.castShadow=true;arch.receiveShadow=true;g.add(arch);
-  }
-  add(new THREE.BoxGeometry(.12,.10,.29),paint,[x*1.04,.91,-.48]);
+  add(new THREE.BoxGeometry(.10,.12,2.75),dark,[x,.43,0]);
+  for(const z of [-1.12,1.10])add(new THREE.BoxGeometry(.10,.18,.78),dark,[x,.58,z]);
  }
- // Front grille, headlights, rear lamps and rear diffuser.
- add(new THREE.BoxGeometry(.66,.12,.035),dark,[0,.56,-1.96]);
- for(const x of [-.67,.67]){
-  add(new THREE.BoxGeometry(.29,.065,.035),light,[x,.72,-1.83]);
-  add(new THREE.BoxGeometry(.28,.075,.035),tail,[x,.67,1.79]);
+ // Tiga garis livery pada kap, atap, dan bagasi.
+ for(let i=0;i<3;i++){
+  const sm=new THREE.MeshStandardMaterial({color:[0xffffff,0xffd43b,0x171b20][i],roughness:.3});
+  const xx=(i-1)*.22,ww=i===1?.12:.075;
+  add(new THREE.BoxGeometry(ww,.018,.94),sm,[xx,.873,-1.04]);
+  add(new THREE.BoxGeometry(ww,.018,.66),sm,[xx,1.232,.10]);
+  add(new THREE.BoxGeometry(ww,.018,.62),sm,[xx,.835,1.20]);
  }
- add(new THREE.BoxGeometry(1.42,.11,.15),dark,[0,.43,1.79]);
- // Low NASCAR-style roof and substantial rear wing with separate supports.
- for(const x of [-.52,.52])add(new THREE.BoxGeometry(.055,.29,.075),dark,[x,.91,1.53]);
- add(new THREE.BoxGeometry(1.72,.075,.28),dark,[0,1.055,1.62]);
- add(new THREE.BoxGeometry(1.64,.025,.22),paint,[0,1.10,1.62]);
- // Racing number panels, inset on both doors.
- for(const x of [-.895,.895]){
-  const panel=add(new THREE.BoxGeometry(.025,.25,.38),whiteMat,[x,.70,.18]);
-  panel.material=whiteMat;
+ // Nomor balap pada pintu dibuat sebagai tekstur agar terlihat seperti decal.
+ const nc=document.createElement('canvas');nc.width=256;nc.height=128;
+ const ctx=nc.getContext('2d');ctx.fillStyle='#f7f3e8';ctx.fillRect(0,0,256,128);
+ ctx.fillStyle='#d92d25';ctx.font='900 90px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.fillText(color===0xd92724?'17':color===0x2476d2?'08':color===0xf2c230?'26':'11',128,65);
+ ctx.fillStyle='#171b20';ctx.fillRect(0,0,256,8);ctx.fillRect(0,120,256,8);
+ const nt=new THREE.CanvasTexture(nc);nt.colorSpace=THREE.SRGBColorSpace;
+ const nm=new THREE.MeshBasicMaterial({map:nt,side:THREE.DoubleSide});
+ for(const x of [-.902,.902]){
+  add(new THREE.PlaneGeometry(.48,.26),nm,[x,.69,.13],null,[0,x>0?Math.PI/2:-Math.PI/2,0]);
+  add(new THREE.BoxGeometry(.025,.075,.35),white,[x,.69,-.42]);
  }
+ add(new THREE.BoxGeometry(.65,.025,.25),white,[0,.89,-1.38]);
+ add(new THREE.BoxGeometry(.45,.028,.09),dark,[0,.907,-1.38]);
+ add(new THREE.BoxGeometry(.72,.025,.16),white,[0,.85,1.42]);
+ add(new THREE.BoxGeometry(1.38,.12,.22),dark,[0,1.31,1.55]);
+ add(new THREE.BoxGeometry(1.30,.04,.18),white,[0,1.39,1.55]);
+ for(const x of [-.61,.61]){
+  add(new THREE.BoxGeometry(.34,.08,.035),new THREE.MeshStandardMaterial({color:0xfff0bd,emissive:0x8c6a30}),[x,.70,-1.77]);
+  add(new THREE.BoxGeometry(.32,.075,.035),new THREE.MeshStandardMaterial({color:0xff2929,emissive:0x9c0000}),[x,.67,1.76]);
+ }
+ add(new THREE.BoxGeometry(.62,.12,.035),dark,[0,.55,-1.79]);
  const wheels=[];
- for(const x of [-.94,.94])for(const z of [-1.13,1.13]){
+ for(const x of [-.94,.94])for(const z of [-1.12,1.10]){
   const w=new THREE.Group();
-  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.355,.355,.25,40,1),rubber);tire.rotation.z=Math.PI/2;w.add(tire);
-  const sideRim=new THREE.Mesh(new THREE.CylinderGeometry(.235,.235,.265,32),rim);sideRim.rotation.z=Math.PI/2;w.add(sideRim);
-  const inner=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.27,32),dark);inner.rotation.z=Math.PI/2;w.add(inner);
-  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.28,20),rim);hub.rotation.z=Math.PI/2;w.add(hub);
-  for(let k=0;k<10;k++){
-   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.026,.19,.035),rim);
-   spoke.position.set(x>0?.145:-.145,Math.sin(k*Math.PI/5)*.105,Math.cos(k*Math.PI/5)*.105);
-   spoke.rotation.x=k*Math.PI/5;w.add(spoke);
-  }
-  w.position.set(x,.36,z);w.children.forEach(c=>{c.castShadow=true;c.receiveShadow=true;});g.add(w);wheels.push(w);
+  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.24,28),rubber);tire.rotation.z=Math.PI/2;w.add(tire);
+  const rm=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.255,24),rim);rm.rotation.z=Math.PI/2;w.add(rm);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.27,16),dark);hub.rotation.z=Math.PI/2;w.add(hub);
+  w.position.set(x,.35,z);w.children.forEach(o=>{o.castShadow=true;o.receiveShadow=true;});g.add(w);wheels.push(w);
  }
  const nitroFlames=[];
- for(const x of [-.40,.40]){
-  add(new THREE.CylinderGeometry(.055,.075,.13,16),dark,[x,.49,1.86],[1,1,1],[Math.PI/2,0,0]);
-  const flame=new THREE.Mesh(new THREE.ConeGeometry(.085,.52,16),nitroGlowMat);
-  flame.rotation.x=Math.PI/2;flame.position.set(x,.49,2.10);flame.visible=false;g.add(flame);nitroFlames.push(flame);
+ for(const x of [-.38,.38]){
+  add(new THREE.CylinderGeometry(.055,.07,.12,12),dark,[x,.48,1.82],null,[Math.PI/2,0,0]);
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.08,.48,12),nitroGlowMat);
+  flame.rotation.x=Math.PI/2;flame.position.set(x,.48,2.08);flame.visible=false;g.add(flame);nitroFlames.push(flame);
  }
  g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;
  scene.add(g);return g;
