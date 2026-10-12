@@ -1683,27 +1683,21 @@ function updatePlayer(dt){
 
  const steering=(keys.right?1:0)-(keys.left?1:0);
  const speedFraction=Math.min(1,Math.abs(speed)/MAX_SPEED);
- // Respons setir lebih cepat di layar sentuh, dengan sedikit smoothing agar tidak menyentak.
+ // Input setir halus, tetapi harus benar-benar memindahkan mobil ke kiri/kanan.
  const steeringSmooth=1-Math.exp(-dt*10);
  steeringInput+=(steering-steeringInput)*steeringSmooth;
- if(Math.abs(speed)>.3){
-  const reverseFactor=speed>=0?1:-1;
-  const turnRate=2.05;
-  const steeringResponse=0.42+speedFraction*0.78;
-  heading-=steeringInput*turnRate*dt*steeringResponse*reverseFactor;
- }
- // Bantuan mengikuti tikungan dikurangi agar input pemain tidak terasa terlambat atau dilawan.
- const curveHeading=Math.atan2(1,routeSlope(player.position.x,trackOptions[selectedTrack]));
- heading+=angleDifference(curveHeading,heading)*Math.min(1,dt*(0.48+speedFraction*0.38));
- // Kunci rotasi bodi: hanya berputar mendatar mengikuti arah mobil, tanpa roll atau pitch.
- // Set seluruh Euler sekaligus agar tidak ada sisa kemiringan pada sumbu lain.
- player.rotation.set(0,heading+Math.PI,0,'YXZ');
  const currentTrack=trackOptions[selectedTrack];
- const lateralOffset=player.position.z-routeCenter(player.position.x,currentTrack);
- player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
- // Paksa mobil mengikuti jalur tengah yang sama dengan peta sirkuit, sambil tetap bisa pindah jalur.
- const laneOffset=THREE.MathUtils.clamp(lateralOffset+steeringInput*speedFraction*dt*7,-10.2,10.2);
+ const roadCenter=routeCenter(player.position.x,currentTrack);
+ // Trek mode ini memanjang pada sumbu X: laju maju tetap di X, setir mengubah posisi lateral Z.
+ player.position.x+=speed*dt;
+ const lateralStep=steeringInput*speedFraction*dt*9.5;
+ const laneOffset=THREE.MathUtils.clamp(player.position.z-roadCenter+lateralStep,-10.2,10.2);
  player.position.z=routeCenter(player.position.x,currentTrack)+laneOffset;
+ // Hidung mobil hanya mengarah sedikit ke tikungan, bukan berputar menyamping seperti drifting.
+ const targetHeading=Math.PI/2-steeringInput*0.20;
+ heading+=angleDifference(targetHeading,heading)*Math.min(1,dt*7);
+ // Kunci bodi rata; hanya yaw kecil mengikuti arah setir.
+ player.rotation.set(0,heading+Math.PI,0,'YXZ');
  // Putaran roda dibuat terbaca, tidak terlalu cepat hingga terlihat seperti roda polos.
  const wheelSpin=speed*dt*.42;
  player.userData.wheels.forEach(w=>{
