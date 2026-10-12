@@ -49,6 +49,51 @@ jobs:
           EOF
           npx cap add android
           npx cap sync android
+          # Create a custom Teteng Racing launcher icon instead of the default Android robot.
+          python3 -m pip install --quiet pillow
+          cat > /tmp/make_icon.py <<'PY'
+          from PIL import Image, ImageDraw
+          import os
+          S=512
+          im=Image.new("RGB",(S,S),(15,17,24))
+          d=ImageDraw.Draw(im)
+          # Dark racing badge with red speed stripes.
+          d.rounded_rectangle((18,18,494,494),radius=112,fill=(19,22,31),outline=(220,32,39),width=18)
+          d.polygon([(34,118),(228,42),(178,106),(34,174)],fill=(218,30,40))
+          d.polygon([(34,180),(168,126),(132,168),(34,218)],fill=(255,255,255))
+          d.polygon([(478,334),(300,472),(345,405),(478,278)],fill=(218,30,40))
+          # Stylized top-down racing car.
+          d.rounded_rectangle((176,108,336,405),radius=48,fill=(232,235,240),outline=(255,255,255),width=7)
+          d.polygon([(176,174),(198,124),(314,124),(336,174)],fill=(220,30,40))
+          d.rounded_rectangle((198,187,314,264),radius=20,fill=(38,54,73),outline=(125,155,180),width=5)
+          d.rounded_rectangle((198,281,314,326),radius=12,fill=(205,30,39))
+          d.rounded_rectangle((194,342,318,368),radius=8,fill=(25,28,37))
+          # Wheels
+          for x in (151,330):
+            d.rounded_rectangle((x,172,x+35,242),radius=10,fill=(5,6,9))
+            d.rounded_rectangle((x,292,x+35,362),radius=10,fill=(5,6,9))
+          # Checkered finish flag at top-right
+          d.line((380,70,380,174),fill=(240,240,240),width=8)
+          for row in range(4):
+            for col in range(4):
+              color=(245,245,245) if (row+col)%2==0 else (25,27,32)
+              d.rectangle((388+col*18,72+row*18,405+col*18,89+row*18),fill=color)
+          out='/tmp/teteng-racing-icon.png'
+          im.save(out)
+          sizes={'mdpi':48,'hdpi':72,'xhdpi':96,'xxhdpi':144,'xxxhdpi':192}
+          base='android/app/src/main/res'
+          for density,size in sizes.items():
+            folder=os.path.join(base,'mipmap-'+density)
+            os.makedirs(folder,exist_ok=True)
+            icon=im.resize((size,size),Image.Resampling.LANCZOS)
+            icon.save(os.path.join(folder,'ic_launcher.png'))
+            icon.save(os.path.join(folder,'ic_launcher_round.png'))
+          # Use PNG launcher icons to prevent Android adaptive-icon fallback artwork.
+          for name in ('ic_launcher.xml','ic_launcher_round.xml'):
+            path=os.path.join(base,'mipmap-anydpi-v26',name)
+            if os.path.exists(path): os.remove(path)
+          PY
+          python3 /tmp/make_icon.py
           perl -0pi -e 's/(<activity\\b[^>]*android:name="\\.MainActivity")/$1 android:screenOrientation="landscape"/' android/app/src/main/AndroidManifest.xml
           chmod +x android/gradlew
 
