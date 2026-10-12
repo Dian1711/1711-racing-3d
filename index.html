@@ -428,9 +428,10 @@ function updateHUD(){
   (ranks.findIndex(r=>r.isPlayer)+1)+'/4';
 }
 
-// Suara mesin sintetis ringan; audio baru aktif setelah tombol mulai ditekan.
-let audioContext=null,engineOsc=null,engineOsc2=null,nitroOsc=null;
-let engineGain=null,engineGain2=null,nitroGain=null,engineFilter=null;
+// Suara mesin bergaya F1: RPM naik selama gas ditahan, lalu turun saat gas dilepas.
+let audioContext=null,engineOsc=null,engineOsc2=null,engineOsc3=null,nitroOsc=null,nitroNoise=null;
+let engineGain=null,engineGain2=null,engineGain3=null,nitroGain=null,engineFilter=null,nitroFilter=null;
+let engineRPM=0;
 
 function initAudio(){
  try{
@@ -438,14 +439,17 @@ function initAudio(){
   if(!AudioCtx)return;
   if(!audioContext){
    audioContext=new AudioCtx();
+
    engineFilter=audioContext.createBiquadFilter();
    engineFilter.type='lowpass';
-   engineFilter.frequency.value=850;
+   engineFilter.frequency.value=1000;
+   engineFilter.Q.value=1.2;
+
    engineGain=audioContext.createGain();
    engineGain.gain.value=0;
    engineOsc=audioContext.createOscillator();
    engineOsc.type='sawtooth';
-   engineOsc.frequency.value=55;
+   engineOsc.frequency.value=65;
    engineOsc.connect(engineFilter);
    engineFilter.connect(engineGain);
    engineGain.connect(audioContext.destination);
@@ -454,20 +458,57 @@ function initAudio(){
    engineGain2=audioContext.createGain();
    engineGain2.gain.value=0;
    engineOsc2=audioContext.createOscillator();
-   engineOsc2.type='triangle';
-   engineOsc2.frequency.value=82;
+   engineOsc2.type='square';
+   engineOsc2.detune.value=7;
+   engineOsc2.frequency.value=95;
    engineOsc2.connect(engineGain2);
    engineGain2.connect(audioContext.destination);
    engineOsc2.start();
 
+   engineGain3=audioContext.createGain();
+   engineGain3.gain.value=0;
+   engineOsc3=audioContext.createOscillator();
+   engineOsc3.type='triangle';
+   engineOsc3.detune.value=-9;
+   engineOsc3.frequency.value=130;
+   engineOsc3.connect(engineGain3);
+   engineGain3.connect(audioContext.destination);
+   engineOsc3.start();
+
+   // Lapisan gemuruh dan desis berfilter untuk efek nitro seperti geledek.
+   nitroFilter=audioContext.createBiquadFilter();
+   nitroFilter.type='lowpass';
+   nitroFilter.frequency.value=900;
+   nitroFilter.Q.value=0.8;
    nitroGain=audioContext.createGain();
    nitroGain.gain.value=0;
    nitroOsc=audioContext.createOscillator();
-   nitroOsc.type='sine';
-   nitroOsc.frequency.value=180;
-   nitroOsc.connect(nitroGain);
+   nitroOsc.type='sawtooth';
+   nitroOsc.frequency.value=42;
+   nitroOsc.connect(nitroFilter);
+   nitroFilter.connect(nitroGain);
    nitroGain.connect(audioContext.destination);
    nitroOsc.start();
+
+   const bufferSize=2*audioContext.sampleRate;
+   const noiseBuffer=audioContext.createBuffer(1,bufferSize,audioContext.sampleRate);
+   const noiseData=noiseBuffer.getChannelData(0);
+   for(let i=0;i<bufferSize;i++)noiseData[i]=Math.random()*2-1;
+   nitroNoise=audioContext.createBufferSource();
+   nitroNoise.buffer=noiseBuffer;
+   nitroNoise.loop=true;
+   const noiseFilter=audioContext.createBiquadFilter();
+   noiseFilter.type='bandpass';
+   noiseFilter.frequency.value=420;
+   noiseFilter.Q.value=.55;
+   const noiseGain=audioContext.createGain();
+   noiseGain.gain.value=.0;
+   nitroNoise.connect(noiseFilter);
+   noiseFilter.connect(noiseGain);
+   noiseGain.connect(audioContext.destination);
+   nitroNoise.start();
+   nitroGain.noiseGain=noiseGain;
+   nitroGain.noiseFilter=noiseFilter;
   }
   if(audioContext.state==='suspended')audioContext.resume();
  }catch(err){
@@ -475,18 +516,33 @@ function initAudio(){
  }
 }
 
-function updateSound(){
+function updateSound(dt=1/60){
  if(!audioContext||!engineOsc||audioContext.state!=='running')return;
  const now=audioContext.currentTime;
+ const throttle=running&&keys.gas&&!keys.reverse?1:0;
  const moving=running?Math.min(1,Math.abs(speed)/MAX_SPEED):0;
- const targetFreq=48+Math.min(1,Math.abs(speed)/MAX_SPEED)*105+(keys.gas?14:0);
- engineOsc.frequency.setTargetAtTime(targetFreq,now,.08);
- engineOsc2.frequency.setTargetAtTime(targetFreq*1.48,now,.1);
- engineFilter.frequency.setTargetAtTime(450+moving*1250,now,.12);
- engineGain.gain.setTargetAtTime(running?.018+moving*.025:0,now,.12);
- engineGain2.gain.setTargetAtTime(running?.006+moving*.008:0,now,.12);
- nitroOsc.frequency.setTargetAtTime(180+moving*220,now,.05);
- nitroGain.gain.setTargetAtTime(running&&nitroActive?.022:0,now,.06);
+
+ // Gas ditahan membuat putaran mesin terus naik walaupun kecepatan mulai stabil.
+ if(throttle)engineRPM=Math.min(1,engineRPM+dt*.24);
+ else engineRPM=Math.max(moving*.28,engineRPM-dt*.42);
+ const rpm=0.12+engineRPM*.88;
+ const baseFreq=58+rpm*235+(nitroActive?35:0);
+
+ engineOsc.frequency.setTargetAtTime(baseFreq,now,.045);
+ engineOsc2.frequency.setTargetAtTime(baseFreq*1.51,now,.05);
+ engineOsc3.frequency.setTargetAtTime(baseFreq*2.02,now,.06);
+ engineFilter.frequency.setTargetAtTime(650+rpm*3000,now,.07);
+ engineGain.gain.setTargetAtTime(running?.012+rpm*.035:0,now,.08);
+ engineGain2.gain.setTargetAtTime(running?.002+rpm*.009:0,now,.08);
+ engineGain3.gain.setTargetAtTime(running?.003+rpm*.012:0,now,.08);
+
+ const thunder=running&&nitroActive;
+ nitroOsc.frequency.setTargetAtTime(thunder?38+Math.random()*24:38,now,.035);
+ nitroFilter.frequency.setTargetAtTime(thunder?500+Math.random()*700:450,now,.05);
+ nitroGain.gain.setTargetAtTime(thunder?.035:0,now,.045);
+ if(nitroGain.noiseGain){
+  nitroGain.noiseGain.gain.setTargetAtTime(thunder?.018:0,now,.04);
+ }
 }
 
 function finishRace(winner){
@@ -719,7 +775,7 @@ function animate(){
  requestAnimationFrame(animate);
  const dt=Math.min(clock.getDelta(),.04);
  update(dt);
- updateSound();
+ updateSound(dt);
 
  const behind=new THREE.Vector3(
   -Math.sin(heading)*10,
