@@ -564,8 +564,8 @@ for(let x=-1000,index=0;x<1000;x+=145,index++){
 }
 
 // Warga berdiri di trotoar menonton balapan, beberapa mengangkat tangan atau ponsel.
-const crowdShirts=[0xe84b3c,0x287bc1,0xe8c34d,0x3b8a5c,0xf0eee7,0x754ca3].map(mat);
-const crowdSkin=[0xb9774f,0x8f5a3b,0xd49a70,0x70462f].map(mat);
+const crowdShirts=[0xe84b3c,0x287bc1,0xe8c34d,0x3b8a5c,0xf0eee7,0x754ca3].map(color=>mat(color));
+const crowdSkin=[0xb9774f,0x8f5a3b,0xd49a70,0x70462f].map(color=>mat(color));
 function makeSpectator(x,side,index){
  const g=new THREE.Group();g.position.set(x,0,side*(17.1+Math.random()*1.5));
  const body=new THREE.Mesh(new THREE.CylinderGeometry(.20,.25,.78,8),crowdShirts[index%crowdShirts.length]);body.position.y=1.0;g.add(body);
@@ -583,7 +583,7 @@ function makeSpectator(x,side,index){
  }
  scene.add(g);
 }
-for(let x=-1070,index=0;x<1080;x+=8,index++){
+for(let x=-1070,index=0;x<1080;x+=14,index++){
  for(const side of [-1,1])if(Math.random()>.2)makeSpectator(x+(Math.random()-.5)*2,side,index+(side===1?2:0));
 }
 
