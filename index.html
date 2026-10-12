@@ -378,9 +378,14 @@ function createCar(color){
  const helmetMat=mat(0xffd447,.32);
  add(new THREE.SphereGeometry(.19,16,12),helmetMat,[0,.91,.25]);
  add(new THREE.BoxGeometry(.30,.065,.08),dark,[0,.92,.08]);
- // Rear engine cover and air intake.
+ // Rear engine cover, intake, and raised rear bumper/aero hoop above the cover.
  add(new THREE.BoxGeometry(.78,.30,.78),paint,[0,.55,.88]);
  add(new THREE.BoxGeometry(.32,.22,.26),dark,[0,.78,.78]);
+ add(new THREE.BoxGeometry(1.16,.10,.18),dark,[0,.91,1.02]);
+ add(new THREE.BoxGeometry(.98,.055,.12),white,[0,.975,1.02]);
+ for(const x of [-.49,.49]){
+  add(new THREE.BoxGeometry(.09,.22,.10),paint,[x,.84,1.02]);
+ }
  // Sirip aerodinamis tengah (shark fin) mengalir dari kokpit ke sayap belakang.
  const finShape=new THREE.Shape();
  finShape.moveTo(-.48,.02);
@@ -418,19 +423,23 @@ function createCar(color){
   tire.rotation.z=Math.PI/2;w.add(tire);
   const rimMesh=new THREE.Mesh(new THREE.CylinderGeometry(.235,.235,.315,24),rim);
   rimMesh.rotation.z=Math.PI/2;w.add(rimMesh);
-  // Ring kontras di velg membuat putaran ban lebih mudah terlihat.
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(.18,.018,6,24),white);
+  // Velg kontras dengan penanda warna besar agar rotasi ban terlihat jelas.
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.205,.026,7,24),white);
   ring.rotation.y=Math.PI/2;w.add(ring);
   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.33,16),dark);
   hub.rotation.z=Math.PI/2;w.add(hub);
-  for(let k=0;k<8;k++){
-   const spokeMat=k%2===0?white:dark;
-   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.045,.025,.34),spokeMat);
-   spoke.position.y=Math.sin(k*Math.PI/4)*.13;
-   spoke.position.z=Math.cos(k*Math.PI/4)*.13;
-   spoke.rotation.x=k*Math.PI/4;
+  const spokeAccent=mat(0xff5b35,.4);
+  for(let k=0;k<6;k++){
+   const angle=k*Math.PI/3;
+   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.055,.035,.30),k%2===0?spokeAccent:white);
+   spoke.position.y=Math.sin(angle)*.135;
+   spoke.position.z=Math.cos(angle)*.135;
+   spoke.rotation.x=angle;
    w.add(spoke);
   }
+  // Satu tanda warna di sisi velg jadi penunjuk visual saat roda berputar.
+  const marker=new THREE.Mesh(new THREE.BoxGeometry(.035,.075,.09),spokeAccent);
+  marker.position.set(0,.19,.07);w.add(marker);
   w.position.set(x,.36,z);
   w.children.forEach(o=>{o.castShadow=true;o.receiveShadow=true;});
   g.add(w);wheels.push(w);
@@ -1055,29 +1064,30 @@ function updatePlayer(dt){
  player.rotation.z+=(targetRoll-player.rotation.z)*(1-Math.exp(-dt*3.2));
  player.rotation.y=heading+Math.PI;
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
- player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*1.15);
+ // Putaran roda dibuat terbaca, tidak terlalu cepat hingga terlihat seperti roda polos.
+ const wheelSpin=speed*dt*.42;
+ player.userData.wheels.forEach(w=>w.rotation.x+=wheelSpin);
 
 
- // Tepi jalan: tahan mobil di dekat tepi, kurangi laju secara bertahap,
- // dan arahkan hidung ke dalam tanpa pantulan tajam ke tengah jalan.
+ // Tepi jalan tidak memantulkan mobil: tetap di tepi, lalu belokkan arah secara perlahan ke dalam.
  edgeCollisionCooldown=Math.max(0,edgeCollisionCooldown-dt);
  const safeEdge=11.35;
  if(player.position.z>safeEdge){
   player.position.z=safeEdge;
-  if(speed*Math.cos(heading)>0 && edgeCollisionCooldown<=0){
-   heading=Math.atan2(Math.sin(heading),-Math.max(.18,Math.abs(Math.cos(heading))));
-   speed*=.88;
-   steeringInput*=.35;
-   edgeCollisionCooldown=.28;
+  if(speed*Math.cos(heading)>0){
+   const inwardHeading=Math.atan2(Math.sin(heading),-Math.max(.12,Math.abs(Math.cos(heading))));
+   heading+=angleDifference(inwardHeading,heading)*Math.min(1,dt*2.2);
+   speed*=Math.exp(-.16*dt);
+   steeringInput*=Math.exp(-1.8*dt);
    nitroActive=false;keys.nitro=false;
   }
  }else if(player.position.z< -safeEdge){
   player.position.z=-safeEdge;
-  if(speed*Math.cos(heading)<0 && edgeCollisionCooldown<=0){
-   heading=Math.atan2(Math.sin(heading),Math.max(.18,Math.abs(Math.cos(heading))));
-   speed*=.88;
-   steeringInput*=.35;
-   edgeCollisionCooldown=.28;
+  if(speed*Math.cos(heading)<0){
+   const inwardHeading=Math.atan2(Math.sin(heading),Math.max(.12,Math.abs(Math.cos(heading))));
+   heading+=angleDifference(inwardHeading,heading)*Math.min(1,dt*2.2);
+   speed*=Math.exp(-.16*dt);
+   steeringInput*=Math.exp(-1.8*dt);
    nitroActive=false;keys.nitro=false;
   }
  }
@@ -1169,15 +1179,11 @@ function animate(){
   -Math.cos(heading)*cameraDistance
  );
  const target=player.position.clone().add(behind);
- // Kamera mengikuti dengan peredaman kecil supaya koreksi tepi tidak membuat layar tersentak.
- const cameraSmooth=1-Math.exp(-dt*7.5);
- camera.position.lerp(target,cameraSmooth);
- const lookTarget=player.position.clone().add(new THREE.Vector3(0,.92,0));
- if(!animate.cameraLook)animate.cameraLook=lookTarget.clone();
- animate.cameraLook.lerp(lookTarget,1-Math.exp(-dt*9));
+ // Kembalikan kamera ke jarak semula dan ikuti mobil langsung tanpa tertinggal.
+ camera.position.copy(target);
  camera.fov=68;
  camera.updateProjectionMatrix();
- camera.lookAt(animate.cameraLook);
+ camera.lookAt(player.position.x,player.position.y+.92,player.position.z);
  renderer.render(scene,camera);
 }
 
