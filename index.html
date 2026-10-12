@@ -572,6 +572,49 @@ for(let x=-1080;x<=1080;x+=34){
   makeBuilding(x+(Math.random()-.5)*10,side,buildingIndex++);
  }
 }
+
+// Properti trotoar di depan tiap rumah/gedung, menghadap ke jalan balap.
+const planterMats=[mat(0x8c9b72),mat(0x9b8b70),mat(0x6f8a83)];
+const potMats=[mat(0x8a7561),mat(0x606b72),mat(0xb0a18c)];
+const binMats=[mat(0x3d5960),mat(0x65745b),mat(0x4d5157)];
+function addRoadsideProps(x,side,index){
+ const z=side*15.35;
+ // Pot tanaman rendah dengan semak, ditempatkan di sisi trotoar dekat fasad.
+ const pot=new THREE.Mesh(new THREE.BoxGeometry(1.15,.62,.78),potMats[index%potMats.length]);
+ pot.position.set(x+7.5,.25,z);pot.castShadow=true;scene.add(pot);
+ const shrub=new THREE.Mesh(new THREE.SphereGeometry(.55,8,6),planterMats[index%planterMats.length]);
+ shrub.position.set(x+7.5,.78,z);shrub.castShadow=true;scene.add(shrub);
+ // Tempat sampah kecil di sisi seberang pintu masuk.
+ const bin=new THREE.Mesh(new THREE.BoxGeometry(.52,.88,.5),binMats[index%binMats.length]);
+ bin.position.set(x-7.3,.44,z);bin.castShadow=true;scene.add(bin);
+ const lid=new THREE.Mesh(new THREE.BoxGeometry(.60,.09,.56),darkMat);
+ lid.position.set(x-7.3,.91,z);scene.add(lid);
+ // Bangku trotoar pada setiap beberapa bangunan.
+ if(index%2===0){
+  const benchMat=mat(0x755039);
+  const seat=new THREE.Mesh(new THREE.BoxGeometry(1.75,.12,.48),benchMat);
+  seat.position.set(x,.58,z);seat.castShadow=true;scene.add(seat);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(1.75,.55,.10),benchMat);
+  back.position.set(x,.88,z+side*.20);back.castShadow=true;scene.add(back);
+  for(const dx of [-.68,.68]){
+   const leg=new THREE.Mesh(new THREE.BoxGeometry(.10,.48,.10),darkMat);
+   leg.position.set(x+dx,.29,z);scene.add(leg);
+  }
+ }
+ // Tiang petunjuk toko kecil yang terlihat dari arah mobil.
+ if(index%3===0){
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.10,1.8,.10),darkMat);
+  post.position.set(x-9.2,.9,z);scene.add(post);
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(1.15,.62,.12),shopMats[index%shopMats.length]);
+  sign.position.set(x-9.2,1.72,z);scene.add(sign);
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(.75,.08,.14),whiteMat);
+  stripe.position.set(x-9.2,1.75,z-side*.07);scene.add(stripe);
+ }
+}
+let roadsideIndex=0;
+for(let x=-1080;x<=1080;x+=34){
+ for(const side of [-1,1])addRoadsideProps(x+(Math.random()-.5)*10,side,roadsideIndex++);
+}
 // Pedagang kaki lima dengan gerobak dan kanopi di sisi trotoar.
 const stallColors=[0xe84a36,0x2877b9,0xe5b83f,0x31845b];
 function makeVendorStall(x,side,index){
@@ -960,22 +1003,20 @@ function updatePlayer(dt){
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*1.15);
 
 
- // Benturan di tepi jalan: mobil memantul ke arah dalam, dengan kehilangan kecepatan kecil.
- // Jangan menghentikan mobil secara mendadak; pertahankan sebagian besar momentum.
+ // Benturan tepi jalan: pantulan pendek dan teredam, bukan mental berulang seperti bola.
  const safeEdge=11.55;
- const bounceLoss=.88;
  if(player.position.z>safeEdge){
-  player.position.z=safeEdge-.18;
-  speed*=bounceLoss;
-  heading=Math.atan2(Math.sin(heading),-Math.abs(Math.cos(heading))-.18);
+  player.position.z=safeEdge-.42;
+  if(Math.cos(heading)>0) heading=-Math.PI-heading;
+  speed*=.78;
   nitroActive=false;keys.nitro=false;
-  player.rotation.z=.09;
+  player.rotation.z=-.055;
  }else if(player.position.z< -safeEdge){
-  player.position.z=-safeEdge+.18;
-  speed*=bounceLoss;
-  heading=Math.atan2(Math.sin(heading),Math.abs(Math.cos(heading))+.18);
+  player.position.z=-safeEdge+.42;
+  if(Math.cos(heading)<0) heading=Math.PI-heading;
+  speed*=.78;
   nitroActive=false;keys.nitro=false;
-  player.rotation.z=-.09;
+  player.rotation.z=.055;
  }
 
  // Mode sirkuit kota: uji akselerasi tetap aktif, AI masih nonaktif.
@@ -1058,20 +1099,18 @@ function animate(){
  update(dt);
  updateSound(dt);
 
- const speedRatio=Math.min(1,Math.abs(speed)/MAX_SPEED);
- const cameraDistance=6.4+speedRatio*1.25+(nitroActive?.25:0);
+ const cameraDistance=5.15;
  const behind=new THREE.Vector3(
   -Math.sin(heading)*cameraDistance,
-  3.05+speedRatio*.5,
+  2.65,
   -Math.cos(heading)*cameraDistance
  );
  const target=player.position.clone().add(behind);
- camera.position.lerp(target,.24+speedRatio*.1);
- camera.fov=72+speedRatio*12+(nitroActive?2:0);
+ // Jarak, tinggi, dan FOV kamera tetap sama meski kecepatan bertambah.
+ camera.position.lerp(target,.20);
+ camera.fov=68;
  camera.updateProjectionMatrix();
- const shake=speedRatio*.012+(nitroActive?.004:0);
- camera.position.y+=Math.sin(performance.now()*.035)*shake;
- camera.lookAt(player.position.x,player.position.y+.82,player.position.z);
+ camera.lookAt(player.position.x,player.position.y+.92,player.position.z);
  renderer.render(scene,camera);
 }
 
