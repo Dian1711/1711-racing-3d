@@ -126,7 +126,8 @@ const redMat=mat(0xf3442e);
 const darkMat=mat(0x20252b);
 const glassMat=mat(0x8fc8df,.35);
 
-const nitroGlowMat=new THREE.MeshBasicMaterial({color:0x33c8ff,transparent:true,opacity:.9});
+const nitroGlowMat=new THREE.MeshBasicMaterial({color:0x168dff,transparent:true,opacity:.98});
+const nitroRedMat=new THREE.MeshBasicMaterial({color:0xff2518,transparent:true,opacity:.96});
 
 // Tekstur aspal dibuat secara prosedural agar jalan tidak tampak polos seperti balok.
 function makeAsphaltTexture(){
@@ -336,9 +337,9 @@ function createCar(color){
  // Semua penampang memakai sumbu tengah yang sama agar ujung tidak miring.
  const noseSections=[
   {z:-.55,w:.39,b:.37,t:.62},
-  {z:-1.45,w:.34,b:.37,t:.60},
-  {z:-2.35,w:.20,b:.40,t:.55},
-  {z:-3.22,w:.018,b:.475,t:.49}
+  {z:-1.60,w:.34,b:.37,t:.60},
+  {z:-2.65,w:.20,b:.40,t:.55},
+  {z:-3.72,w:.018,b:.475,t:.49}
  ];
  const noseVertices=[],noseIndices=[];
  for(const s of noseSections){
@@ -358,11 +359,11 @@ function createCar(color){
  add(noseGeo,paint,[0,0,0]);
  // Lapisan atas yang menyambung ke monocoque tanpa mengubah garis tengah.
  add(new THREE.BoxGeometry(.78,.16,1.22),paint,[0,.49,-.82]);
- add(new THREE.BoxGeometry(2.38,.10,.36),dark,[0,.31,-3.00]);
- add(new THREE.BoxGeometry(2.20,.045,.23),paint,[0,.375,-3.00]);
+ add(new THREE.BoxGeometry(2.48,.10,.36),dark,[0,.31,-3.48]);
+ add(new THREE.BoxGeometry(2.30,.045,.23),paint,[0,.375,-3.48]);
  // Endplate sayap depan dibuat berpasangan dengan jarak yang sama dari garis tengah.
  for(const x of [-1.08,1.08]){
-  add(new THREE.BoxGeometry(.07,.23,.30),paint,[x,.43,-3.00]);
+  add(new THREE.BoxGeometry(.07,.23,.30),paint,[x,.43,-3.48]);
  }
  // Side pods and aerodynamic floor.
  for(const x of [-.72,.72]){
@@ -379,13 +380,21 @@ function createCar(color){
  add(new THREE.SphereGeometry(.19,16,12),helmetMat,[0,.91,.25]);
  add(new THREE.BoxGeometry(.30,.065,.08),dark,[0,.92,.08]);
  // Rear engine cover, intake, and raised rear bumper/aero hoop above the cover.
- add(new THREE.BoxGeometry(.78,.30,.78),paint,[0,.55,.88]);
- add(new THREE.BoxGeometry(.32,.22,.26),dark,[0,.78,.78]);
- add(new THREE.BoxGeometry(1.16,.10,.18),dark,[0,.91,1.02]);
- add(new THREE.BoxGeometry(.98,.055,.12),white,[0,.975,1.02]);
- for(const x of [-.49,.49]){
-  add(new THREE.BoxGeometry(.09,.22,.10),paint,[x,.84,1.02]);
+ add(new THREE.BoxGeometry(.82,.40,.82),paint,[0,.63,.88]);
+ add(new THREE.BoxGeometry(.34,.25,.28),dark,[0,.94,.78]);
+ // Bemper belakang ditinggikan dan diperkuat di atas kap mesin.
+ add(new THREE.BoxGeometry(1.22,.12,.20),dark,[0,1.12,1.02]);
+ add(new THREE.BoxGeometry(1.04,.055,.13),white,[0,1.19,1.02]);
+ for(const x of [-.51,.51]){
+  add(new THREE.BoxGeometry(.10,.30,.12),paint,[x,.99,1.02]);
  }
+ // Behel/roll hoop tinggi di atas kap belakang, dengan dua kaki dan palang melintang.
+ for(const x of [-.40,.40]){
+  add(new THREE.BoxGeometry(.075,.38,.075),dark,[x,1.12,.76]);
+  add(new THREE.BoxGeometry(.035,.34,.04),white,[x,1.13,.716]);
+ }
+ add(new THREE.BoxGeometry(.88,.075,.075),dark,[0,1.30,.76]);
+ add(new THREE.BoxGeometry(.72,.025,.035),white,[0,1.345,.718]);
  // Sirip aerodinamis tengah (shark fin) mengalir dari kokpit ke sayap belakang.
  const finShape=new THREE.Shape();
  finShape.moveTo(-.48,.02);
@@ -406,7 +415,7 @@ function createCar(color){
  add(new THREE.BoxGeometry(1.80,.035,.24),paint,[0,.945,1.48]);
  // Corak balap tambahan: garis ganda di hidung, aksen sisi, dan panel belakang.
  for(const x of [-.16,.16]){
-  add(new THREE.BoxGeometry(.075,.018,2.42),white,[x,.595,-1.77]);
+  add(new THREE.BoxGeometry(.075,.018,2.92),white,[x,.595,-2.02]);
  }
  add(new THREE.BoxGeometry(.12,.018,.60),white,[0,.715,.88]);
  for(const x of [-.965,.965]){
@@ -454,8 +463,13 @@ function createCar(color){
  const nitroFlames=[];
  for(const x of [-.22,.22]){
   add(new THREE.CylinderGeometry(.055,.07,.12,12),dark,[x,.48,1.43],null,[Math.PI/2,0,0]);
-  const flame=new THREE.Mesh(new THREE.ConeGeometry(.075,.40,12),nitroGlowMat);
-  flame.rotation.x=Math.PI/2;flame.position.set(x,.48,1.70);flame.visible=false;g.add(flame);nitroFlames.push(flame);
+  const flameGroup=new THREE.Group();
+  // Api luar merah dengan inti biru terang saat nitro aktif.
+  const outerFlame=new THREE.Mesh(new THREE.ConeGeometry(.095,.48,12),nitroRedMat);
+  outerFlame.rotation.x=Math.PI/2;outerFlame.position.z=.10;flameGroup.add(outerFlame);
+  const blueCore=new THREE.Mesh(new THREE.ConeGeometry(.048,.34,12),nitroGlowMat);
+  blueCore.rotation.x=Math.PI/2;blueCore.position.z=.04;flameGroup.add(blueCore);
+  flameGroup.position.set(x,.48,1.58);flameGroup.visible=false;g.add(flameGroup);nitroFlames.push(flameGroup);
  }
  g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;
  scene.add(g);return g;
