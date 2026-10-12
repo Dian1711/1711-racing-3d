@@ -1695,9 +1695,8 @@ function updatePlayer(dt){
  // Bantuan mengikuti tikungan dikurangi agar input pemain tidak terasa terlambat atau dilawan.
  const curveHeading=Math.atan2(1,routeSlope(player.position.x,trackOptions[selectedTrack]));
  heading+=angleDifference(curveHeading,heading)*Math.min(1,dt*(0.48+speedFraction*0.38));
- // Body roll ringan dan lembut mengikuti setir yang sudah dihaluskan.
- const targetRoll=-steeringInput*speedFraction*0.035;
- player.rotation.z+=(targetRoll-player.rotation.z)*(1-Math.exp(-dt*3.2));
+ // Body tetap rata seperti mobil balap biasa; jangan memiringkan seluruh bodi saat belok.
+ player.rotation.z=0;
  player.rotation.y=heading+Math.PI;
  const currentTrack=trackOptions[selectedTrack];
  const lateralOffset=player.position.z-routeCenter(player.position.x,currentTrack);
