@@ -887,9 +887,7 @@ for(let x=-1060;x<=1060;x+=48){
 document.querySelector('.brand').innerHTML='1711 <span>URBAN NASCAR</span>';
 document.querySelector('.small').textContent='CITY STREET CIRCUIT';
 document.getElementById('lap').textContent='0%';
-document.querySelector('#lap + span').textContent='MENUJU FINISH';
-document.getElementById('position').textContent='—';
-document.querySelector('#position + span').textContent='BALAPAN';
+document.querySelector('#lap + span').textContent='PROGRES';
 document.getElementById('hint').textContent='Jalan raya kota — jangan melewati garis tepi!';
 
 const player=createCar(0xd92724);
@@ -1234,7 +1232,7 @@ function buildTrackWorld(track){
  const trunkMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0x786044:0x5a4028,roughness:1});
  const leafMat=new THREE.MeshStandardMaterial({color:track.scene==='forest'?0x245b2e:0x387044,roughness:1});
  const pineMat=new THREE.MeshStandardMaterial({color:0x234b38,roughness:1});
- const rockMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0xb78a50:track.scene==='mountain'?0x67717b:0x778a83,roughness:1,flatShading:true});
+ const rockMat=new THREE.MeshStandardMaterial({color:track.scene==='desert'?0xb78a50:track.scene==='mountain'?0x67717b:0x778a83,roughness:1,flatShading:false});
  const buildingMatsLocal=[0x8797a4,0x9ca8ad,0x657785,0xb2b0a5].map((color,index)=>{
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
   const ctx=canvas.getContext('2d');ctx.fillStyle='#'+color.toString(16).padStart(6,'0');ctx.fillRect(0,0,256,256);
@@ -1248,8 +1246,9 @@ function buildTrackWorld(track){
   return new THREE.MeshStandardMaterial({color:0xffffff,map:tex,roughness:.88});
  });
  const railMat=new THREE.MeshStandardMaterial({color:track.scene==='grandprix'?0xe5e7eb:0x8b969c,metalness:.25,roughness:.6});
+ const roofMaterials=[0x555e66,0x777e82,0x454e58].map(color=>new THREE.MeshStandardMaterial({color,roughness:.9}));
  function makeNaturalGeometry(seed,style='rock'){
-  const g=new THREE.IcosahedronGeometry(1,2),pos=g.attributes.position;
+  const g=style==='ridge'?new THREE.SphereGeometry(1,18,12):new THREE.IcosahedronGeometry(1,2),pos=g.attributes.position;
   for(let j=0;j<pos.count;j++){
    const x=pos.getX(j),y=pos.getY(j),z=pos.getZ(j);
    const wave=Math.sin((x*17+y*11+z*13+seed)*2.1)*.075+Math.sin((x*7-z*9+seed)*3.3)*.045;
@@ -1276,8 +1275,10 @@ function buildTrackWorld(track){
     const w=15+Math.random()*13,d=13+Math.random()*12,h=18+Math.random()*38;
     const buildingMat=buildingMatsLocal[i%buildingMatsLocal.length];
     addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),buildingMat),px,h/2,pz,yaw);
-    const roofMat=new THREE.MeshStandardMaterial({color:[0x555e66,0x777e82,0x454e58][i%3],roughness:.9});
+    const roofMat=roofMaterials[i%roofMaterials.length];
     addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w+.5,.65,d+.5),roofMat),px,h+.32,pz,yaw);
+    const facadeBand=new THREE.Mesh(new THREE.BoxGeometry(w+.2,.45,d+.2),roofMaterials[(i+1)%roofMaterials.length]);
+    addRoadside(facadeBand,px,h*.68,pz,yaw);
     if(i%3===0){
      addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w*.3,2.2,d*.28),roofMat),px,h+1.7,pz,yaw);
      addRoadside(new THREE.Mesh(new THREE.BoxGeometry(w*.62,.3,.35),railMat),px,h+2.85,pz,yaw);
