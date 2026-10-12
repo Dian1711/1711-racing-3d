@@ -320,103 +320,78 @@ for(let i=0;i<6;i++){
 
 function createCar(color){
  const g=new THREE.Group();
- const paint=new THREE.MeshStandardMaterial({color,roughness:.3,metalness:.18});
- const dark=mat(0x171b20,.45),rubber=mat(0x101113,.92);
- const rim=new THREE.MeshStandardMaterial({color:0xc4cbd1,metalness:.78,roughness:.28});
- const glass=new THREE.MeshStandardMaterial({color:0x153747,metalness:.18,roughness:.18});
- const windowTrim=mat(0xe8e8df,.38),white=mat(0xf5f0e5,.35);
+ const paint=new THREE.MeshStandardMaterial({color,roughness:.28,metalness:.2});
+ const dark=mat(0x15191e,.42),rubber=mat(0x101113,.94);
+ const rim=new THREE.MeshStandardMaterial({color:0xc7cdd2,metalness:.72,roughness:.3});
+ const glass=new THREE.MeshStandardMaterial({color:0x102a3b,metalness:.18,roughness:.22});
+ const white=mat(0xf5f0e5,.35);
  const add=(geo,material,pos,scale,rot)=>{
   const m=new THREE.Mesh(geo,material);m.position.set(...pos);
   if(scale)m.scale.set(...scale);if(rot)m.rotation.set(...rot);
   m.castShadow=true;m.receiveShadow=true;g.add(m);return m;
  };
- // Lower main body, with distinct hood, trunk, and raised central cabin.
- add(new THREE.BoxGeometry(1.92,.34,3.48),paint,[0,.58,0]);
- // Hood at the front (negative Z): long, low and clearly separated by panel lines.
- add(new THREE.BoxGeometry(1.78,.13,1.08),paint,[0,.755,-1.18]);
- add(new THREE.BoxGeometry(1.70,.035,.88),new THREE.MeshStandardMaterial({color,roughness:.42}),[0,.832,-1.18]);
- // Rear deck / trunk, also lower than the raised passenger compartment.
- add(new THREE.BoxGeometry(1.75,.14,.78),paint,[0,.75,1.30]);
- add(new THREE.BoxGeometry(1.67,.035,.62),new THREE.MeshStandardMaterial({color,roughness:.42}),[0,.837,1.30]);
- // Front and rear panel gaps make hood and trunk readable from above.
- for(const x of [-.82,.82]){
-  add(new THREE.BoxGeometry(.025,.018,.94),dark,[x,.855,-1.18]);
-  add(new THREE.BoxGeometry(.025,.018,.56),dark,[x,.86,1.30]);
+ // Formula-style low monocoque chassis, with the pointed nose facing local -Z.
+ add(new THREE.BoxGeometry(1.05,.30,2.45),paint,[0,.48,.12]);
+ // Narrow tapered nose and front wing.
+ add(new THREE.BoxGeometry(.68,.22,1.45),paint,[0,.49,-1.30]);
+ add(new THREE.ConeGeometry(.43,.92,4),paint,[0,.50,-2.02],null,[Math.PI/2,0,Math.PI/4]);
+ add(new THREE.BoxGeometry(2.28,.10,.34),dark,[0,.32,-2.05]);
+ add(new THREE.BoxGeometry(2.12,.045,.22),paint,[0,.385,-2.05]);
+ // Side pods and aerodynamic floor.
+ for(const x of [-.72,.72]){
+  add(new THREE.BoxGeometry(.48,.34,1.25),paint,[x,.48,.10]);
+  add(new THREE.BoxGeometry(.54,.10,1.55),dark,[x,.31,.08]);
+  // Small upper pod accents.
+  add(new THREE.BoxGeometry(.36,.045,.82),white,[x,.665,.10]);
  }
- // Raised cockpit: side walls reach higher than hood/trunk; roof is narrower and higher.
- add(new THREE.BoxGeometry(1.26,.43,1.30),paint,[0,.99,.05]);
- add(new THREE.BoxGeometry(1.10,.13,.84),paint,[0,1.265,.05]);
- // Front windshield slopes from the low hood to the raised roof.
- add(new THREE.BoxGeometry(1.10,.045,.62),glass,[0,1.045,-.55],null,[-.48,0,0]);
- add(new THREE.BoxGeometry(1.10,.045,.55),glass,[0,1.045,.67],null,[.50,0,0]);
- // Large side windows with visible light trim, so the cabin and seats are distinguishable.
- for(const x of [-.642,.642]){
-  add(new THREE.BoxGeometry(.035,.27,.76),windowTrim,[x,1.055,.04]);
-  add(new THREE.BoxGeometry(.045,.225,.66),glass,[x*1.012,1.065,.04]);
-  add(new THREE.BoxGeometry(.05,.055,.82),dark,[x, .885,.04]);
- }
- // Visible seats and headrests inside the cabin, seen through the side glass.
- const seatMat=mat(0x292c31,.7),seatHighlight=mat(0x555b60,.65);
- for(const x of [-.27,.27]){
-  add(new THREE.BoxGeometry(.30,.25,.32),seatMat,[x,.91,.12]);
-  add(new THREE.BoxGeometry(.27,.22,.10),seatMat,[x,1.075,.25]);
-  add(new THREE.BoxGeometry(.18,.035,.19),seatHighlight,[x,1.025,-.02]);
- }
- // Dashboard, steering wheel and a small center console.
- add(new THREE.BoxGeometry(.88,.09,.18),dark,[0,1.08,-.37]);
- add(new THREE.BoxGeometry(.22,.08,.30),dark,[0,.94,.35]);
- const steering=new THREE.Mesh(new THREE.TorusGeometry(.105,.018,6,16),dark);
- steering.position.set(-.25,1.105,-.30);steering.rotation.x=.25;g.add(steering);
- // Hood stripes, roof graphics and trunk stripes.
- for(let i=0;i<3;i++){
-  const stripe=new THREE.MeshStandardMaterial({color:[0xffffff,0xffd43b,0x171b20][i],roughness:.3});
-  const xx=(i-1)*.22,ww=i===1?.12:.075;
-  add(new THREE.BoxGeometry(ww,.014,.82),stripe,[xx,.858,-1.18]);
-  add(new THREE.BoxGeometry(ww,.014,.65),stripe,[xx,1.335,.05]);
-  add(new THREE.BoxGeometry(ww,.014,.50),stripe,[xx,.86,1.30]);
- }
- // Number decal on each door.
- const nc=document.createElement('canvas');nc.width=256;nc.height=128;
- const ctx=nc.getContext('2d');ctx.fillStyle='#f7f3e8';ctx.fillRect(0,0,256,128);
- ctx.fillStyle='#d92d25';ctx.font='900 90px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.fillText(color===0xd92724?'17':color===0x2476d2?'08':color===0xf2c230?'26':'11',128,65);
- ctx.fillStyle='#171b20';ctx.fillRect(0,0,256,8);ctx.fillRect(0,120,256,8);
- const nt=new THREE.CanvasTexture(nc);nt.colorSpace=THREE.SRGBColorSpace;
- const nm=new THREE.MeshBasicMaterial({map:nt,side:THREE.DoubleSide});
- for(const x of [-.966,.966]){
-  add(new THREE.PlaneGeometry(.48,.27),nm,[x,.62,.12],null,[0,x>0?Math.PI/2:-Math.PI/2,0]);
-  add(new THREE.BoxGeometry(.025,.08,.36),white,[x,.61,-.42]);
-  add(new THREE.BoxGeometry(.035,.07,.34),dark,[x,.61,.56]);
-  add(new THREE.BoxGeometry(.08,.10,2.35),dark,[x,.42,0]);
- }
- // Front splitter, rear diffuser and high stock-car spoiler.
- add(new THREE.BoxGeometry(2.04,.09,.28),dark,[0,.38,-1.78]);
- add(new THREE.BoxGeometry(1.88,.13,.28),dark,[0,.39,1.78]);
- add(new THREE.BoxGeometry(.12,.30,.12),dark,[-.53,1.02,1.48]);
- add(new THREE.BoxGeometry(.12,.30,.12),dark,[.53,1.02,1.48]);
- add(new THREE.BoxGeometry(1.55,.10,.30),dark,[0,1.18,1.55]);
- add(new THREE.BoxGeometry(1.42,.035,.24),white,[0,1.245,1.55]);
- for(const x of [-.65,.65]){
-  add(new THREE.BoxGeometry(.38,.10,.035),new THREE.MeshStandardMaterial({color:0xfff0bd,emissive:0x8c6a30}),[x,.57,-1.77]);
-  add(new THREE.BoxGeometry(.34,.09,.035),new THREE.MeshStandardMaterial({color:0xff2929,emissive:0x9c0000}),[x,.56,1.77]);
- }
+ // Raised, compact cockpit and driver helmet.
+ add(new THREE.BoxGeometry(.72,.24,.78),dark,[0,.66,.28]);
+ add(new THREE.BoxGeometry(.48,.16,.46),glass,[0,.79,.24]);
+ const helmetMat=mat(0xffd447,.32);
+ add(new THREE.SphereGeometry(.19,16,12),helmetMat,[0,.91,.25]);
+ add(new THREE.BoxGeometry(.30,.065,.08),dark,[0,.92,.08]);
+ // Rear engine cover and air intake.
+ add(new THREE.BoxGeometry(.78,.30,.72),paint,[0,.55,.92]);
+ add(new THREE.BoxGeometry(.32,.22,.26),dark,[0,.78,.82]);
+ // Rear wing with two supports.
+ for(const x of [-.56,.56])add(new THREE.BoxGeometry(.09,.38,.10),dark,[x,.66,1.42]);
+ add(new THREE.BoxGeometry(1.95,.10,.34),dark,[0,.88,1.48]);
+ add(new THREE.BoxGeometry(1.80,.035,.24),paint,[0,.945,1.48]);
+ // Simple aerodynamic stripes along the nose and rear body.
+ add(new THREE.BoxGeometry(.09,.018,1.48),white,[0,.615,-1.28]);
+ add(new THREE.BoxGeometry(.12,.018,.60),white,[0,.715,.88]);
+ // Four exposed racing tyres, placed outside the chassis.
  const wheels=[];
- for(const x of [-.98,.98])for(const z of [-1.12,1.10]){
+ for(const x of [-1.02,1.02])for(const z of [-1.25,1.18]){
   const w=new THREE.Group();
-  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.27,32),rubber);tire.rotation.z=Math.PI/2;w.add(tire);
-  const rm=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.285,24),rim);rm.rotation.z=Math.PI/2;w.add(rm);
-  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.30,16),dark);hub.rotation.z=Math.PI/2;w.add(hub);
-  for(let k=0;k<5;k++){
-   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.035,.025,.30),white);
-   spoke.position.y=Math.sin(k*Math.PI*2/5)*.12;spoke.position.z=Math.cos(k*Math.PI*2/5)*.12;w.add(spoke);
+  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.37,.37,.30,32),rubber);
+  tire.rotation.z=Math.PI/2;w.add(tire);
+  const rimMesh=new THREE.Mesh(new THREE.CylinderGeometry(.235,.235,.315,24),rim);
+  rimMesh.rotation.z=Math.PI/2;w.add(rimMesh);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.33,16),dark);
+  hub.rotation.z=Math.PI/2;w.add(hub);
+  for(let k=0;k<6;k++){
+   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.035,.025,.31),white);
+   spoke.position.y=Math.sin(k*Math.PI/3)*.13;
+   spoke.position.z=Math.cos(k*Math.PI/3)*.13;
+   w.add(spoke);
   }
-  w.position.set(x,.34,z);w.children.forEach(o=>{o.castShadow=true;o.receiveShadow=true;});g.add(w);wheels.push(w);
+  w.position.set(x,.36,z);
+  w.children.forEach(o=>{o.castShadow=true;o.receiveShadow=true;});
+  g.add(w);wheels.push(w);
+ }
+ // Visible suspension arms between the chassis and the exposed wheels.
+ for(const x of [-1,1]){
+  for(const z of [-1.18,1.08]){
+   const arm=add(new THREE.BoxGeometry(.58,.045,.055),dark,[x*.76,.48,z]);
+   arm.rotation.y=x*.16;
+  }
  }
  const nitroFlames=[];
- for(const x of [-.38,.38]){
-  add(new THREE.CylinderGeometry(.055,.07,.12,12),dark,[x,.46,1.82],null,[Math.PI/2,0,0]);
-  const flame=new THREE.Mesh(new THREE.ConeGeometry(.08,.48,12),nitroGlowMat);
-  flame.rotation.x=Math.PI/2;flame.position.set(x,.46,2.08);flame.visible=false;g.add(flame);nitroFlames.push(flame);
+ for(const x of [-.22,.22]){
+  add(new THREE.CylinderGeometry(.055,.07,.12,12),dark,[x,.48,1.43],null,[Math.PI/2,0,0]);
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.075,.40,12),nitroGlowMat);
+  flame.rotation.x=Math.PI/2;flame.position.set(x,.48,1.70);flame.visible=false;g.add(flame);nitroFlames.push(flame);
  }
  g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;
  scene.add(g);return g;
@@ -1032,17 +1007,17 @@ function updatePlayer(dt){
  if(player.position.z>safeEdge){
   player.position.z=safeEdge-.12;
   if(speed*Math.cos(heading)>0) heading=-Math.PI-heading;
-  speed*=.68;
-  steeringInput*=.25;
+  speed*=.38;
+  steeringInput*=.10;
   nitroActive=false;keys.nitro=false;
-  player.rotation.z=-.025;
+  player.rotation.z=0;
  }else if(player.position.z< -safeEdge){
   player.position.z=-safeEdge+.12;
   if(speed*Math.cos(heading)<0) heading=Math.PI-heading;
   speed*=.68;
   steeringInput*=.25;
   nitroActive=false;keys.nitro=false;
-  player.rotation.z=.025;
+  player.rotation.z=0;
  }
 
  // Mode sirkuit kota: uji akselerasi tetap aktif, AI masih nonaktif.
