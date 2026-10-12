@@ -51,6 +51,8 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
  .ctrl.nitro{font-size:10px}
  #nitroWrap{top:66px;right:7px;width:95px}
  .ctrl.nitro{font-size:10px}
+ #nitroWrap{top:66px;right:7px;width:95px}
+ .ctrl.nitro{font-size:10px}
  #message{top:22%;padding:15px}
 }
 </style>
@@ -552,10 +554,11 @@ function updatePlayer(dt){
  const steering=(keys.right?1:0)-(keys.left?1:0);
  if(Math.abs(speed)>.3){
   const reverseFactor=speed>=0?1:-1;
-  heading-=steering*1.8*dt*(.25+Math.abs(speed)/MAX_SPEED)*reverseFactor;
+  const turnRate=keys.drift?2.5:1.8;
+  heading-=steering*turnRate*dt*(.25+Math.abs(speed)/MAX_SPEED)*reverseFactor;
  }
 
- player.rotation.y=heading+Math.PI;
+ player.rotation.y=heading+Math.PI+(keys.drift&&Math.abs(speed)>8?steering*.12:0);
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*.6);
 
