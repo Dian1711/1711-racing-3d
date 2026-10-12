@@ -61,7 +61,7 @@ body:not(.racing) #minimap,body:not(.racing) #nitroWrap,body:not(.racing) #hint{
 body:not(.racing) #controls{display:none}
 body.paused #controls{display:none}
 #rotateNotice{display:none;position:fixed;inset:0;z-index:50;background:#080b10;color:#fff;align-items:center;justify-content:center;text-align:center;padding:25px;font-weight:900;letter-spacing:2px}
-#minimap{position:fixed;top:78px;left:12px;width:176px;padding:7px 9px;background:#0a0d12df;z-index:2}
+#minimap{position:fixed;top:12px;right:12px;left:auto;width:176px;padding:7px 9px;background:#0a0d12df;z-index:2}
 #minimap svg{display:block;width:100%;height:auto;margin-top:3px}
 .mapLabel{font-size:9px;letter-spacing:1.4px;font-weight:900;color:#ff7256}
 .mapLegend{display:flex;justify-content:space-between;font-size:8px;color:#b8c6d3}
@@ -69,7 +69,7 @@ body.paused #controls{display:none}
 .stats .stat:last-child strong{font-size:34px;line-height:1;color:#ffcb65}
 .stats .stat:last-child span{font-size:9px;letter-spacing:1.5px}
 @media(max-width:520px){
- #minimap{top:66px;left:7px;width:132px;padding:5px 7px}
+ #minimap{top:7px;right:7px;left:auto;width:132px;padding:5px 7px}
  #raceTools{top:174px;left:7px}
  .mapLabel{font-size:8px}
  .mapLegend{font-size:7px}
@@ -137,6 +137,33 @@ body.paused #controls{display:none}
  .ctrl.nitro{font-size:10px}
  #message{top:50%;left:50%;transform:translate(-50%,-50%);width:min(92%,560px);max-height:88vh;overflow-y:auto;padding:15px}
 }
+/* HUD placement: minimap upper-right, distance metrics below it, vertical nitro beside its button. */
+.topbar .stats{position:fixed;top:124px;right:12px;left:auto;display:flex;flex-direction:column;gap:6px;align-items:stretch;z-index:3}
+.topbar .stats .stat{min-width:86px;padding:7px 10px;background:#0a0d12e8;border:1px solid #ffffff2a}
+.topbar .stats .stat strong{font-size:22px;line-height:1.1}
+.topbar .stats .stat span{font-size:8px;letter-spacing:1px}
+.topbar .stats .stat:last-child{position:static;left:auto;bottom:auto;transform:none;min-width:86px;padding:7px 10px}
+.topbar .stats .stat:last-child strong{font-size:22px}
+#minimap{top:12px;right:12px;left:auto}
+#nitroWrap{position:relative;inset:auto;width:9px;height:62px;padding:2px;flex:0 0 9px;background:#101820dc;border:1px solid #ffffff45;border-radius:8px;display:flex;align-items:stretch}
+#nitroTrack{width:100%;height:100%;background:#334155;border-radius:6px;overflow:hidden;display:flex;align-items:flex-end}
+#nitroFill{width:100%;height:100%;background:linear-gradient(0deg,#078bd0,#b6f2ff);transition:height .08s}
+.nitro-row{display:flex;align-items:center;justify-content:center;gap:4px}
+.accelerator-stack{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:auto}
+.ctrl.nitro{width:52px;height:51px;font-size:20px;flex:0 0 auto}
+.ctrl.nitro small{font-size:9px;letter-spacing:0}
+.ctrl.brake span{font-size:9px;line-height:1.25}
+@media(max-width:520px){
+ .topbar .stats{top:98px;right:7px;gap:4px}
+ .topbar .stats .stat,.topbar .stats .stat:last-child{min-width:68px;padding:5px 7px}
+ .topbar .stats .stat strong,.topbar .stats .stat:last-child strong{font-size:17px}
+ .topbar .stats .stat span{font-size:7px}
+ #minimap{top:7px;right:7px;left:auto;width:132px}
+ #nitroWrap{height:53px;width:8px;flex-basis:8px}
+ .ctrl.nitro{width:45px;height:47px;font-size:17px}
+ .ctrl.nitro small{font-size:8px}
+ .accelerator-stack{gap:3px}
+}
 </style>
 </head>
 <body>
@@ -147,9 +174,8 @@ body.paused #controls{display:none}
       <div class="small">3D CIRCUIT</div>
     </div>
     <div class="stats">
-      <div class="panel stat"><strong id="lap">0%</strong><span>PROGRES</span></div>
+      <div class="panel stat"><strong id="lap">0%</strong><span>FINISH</span></div>
       <div class="panel stat"><strong id="remaining">7.6</strong><span>SISA KM</span></div>
-      <div class="panel stat"><strong id="speed">0</strong><span>KM/J</span></div>
     </div>
   </div>
 
@@ -171,7 +197,7 @@ body.paused #controls{display:none}
   <div id="raceTools"><button id="cameraToggle">CAM: CHASE</button><button id="pauseToggle">Ⅱ PAUSE</button></div>
   <div id="rotateNotice">ROTATE YOUR DEVICE TO LANDSCAPE</div>
   <div id="countdown">3</div>
-  <div id="nitroWrap"><div id="nitroLabel">⚡ NITRO <span id="nitroPct">100%</span></div><div id="nitroTrack"><div id="nitroFill"></div></div></div>
+  
   <div id="controls">
     <div class="controlgroup steering-group">
       <button class="ctrl" data-control="left" aria-label="Steer left">◀</button>
@@ -190,10 +216,11 @@ body.paused #controls{display:none}
       </svg>
     </div>
     <div class="controlgroup">
-      <button class="ctrl reverse" data-control="reverse" aria-label="Mundur">R</button>
-      <button class="ctrl pedal brake" data-control="brake" aria-label="Pedal rem"><span>REM</span></button>
-      <button class="ctrl nitro" data-control="nitro" aria-label="Nitro roket">🚀<small>NITRO</small></button>
-      <button class="ctrl pedal gas" data-control="gas" aria-label="Pedal gas"><span>GAS</span></button>
+      <button class="ctrl pedal brake" data-control="brake" aria-label="Rem dan mundur"><span>REM<br>REV</span></button>
+      <div class="accelerator-stack">
+        <div class="nitro-row"><div id="nitroWrap" aria-label="Sisa nitro"><div id="nitroTrack"><div id="nitroFill"></div></div></div><button class="ctrl nitro" data-control="nitro" aria-label="Nitro roket">🚀<small id="nitroPct">100%</small></button></div>
+        <button class="ctrl pedal gas" data-control="gas" aria-label="Pedal gas"><span>GAS</span></button>
+      </div>
     </div>
   </div>
   <div id="hint">Ikuti lintasan dan hindari rumput!</div>
@@ -955,21 +982,29 @@ function trackDistanceAtX(x,track){
  return a.d+(b.d-a.d)*t;
 }
 function drawMinimap(track){
- const pts=[];
+ const samples=[];
  for(let i=0;i<=100;i++){
   const x=START_LINE_X+track.distance*i/100;
-  const y=35-routeCenter(x,track)*.22;
-  pts.push((i*1.36+2).toFixed(2)+','+THREE.MathUtils.clamp(y,3,67).toFixed(2));
+  samples.push({x,z:routeCenter(x,track)});
  }
+ const zs=samples.map(p=>p.z);
+ track.mapRange={min:Math.min(...zs)-8,max:Math.max(...zs)+8};
+ const pts=samples.map((p,i)=>(i*1.36+2).toFixed(2)+','+mapYAtX(p.x,track).toFixed(2));
  document.getElementById('mapPath').setAttribute('d','M'+pts.join(' L'));
  updateMinimapDot(track);
 }
+function mapYAtX(x,track){
+ const range=track.mapRange||{min:-130,max:130};
+ const z=routeCenter(x,track);
+ return THREE.MathUtils.clamp(66-(z-range.min)/(range.max-range.min||1)*62,3,67);
+}
 function updateMinimapDot(track){
  const ratio=THREE.MathUtils.clamp((player.position.x-START_LINE_X)/track.distance,0,1);
- const x=2+ratio*136,y=THREE.MathUtils.clamp(35-routeCenter(player.position.x,track)*.22,3,67);
+ const x=2+ratio*136,y=mapYAtX(player.position.x,track);
  const dot=document.getElementById('mapDot');
  dot.setAttribute('cx',x.toFixed(2));dot.setAttribute('cy',y.toFixed(2));
 }
+
 function updateHUD(){
  const track=trackOptions[selectedTrack];
  const traveled=trackDistanceAtX(player.position.x,track);
@@ -983,7 +1018,7 @@ function updateHUD(){
  if(analogValue)analogValue.textContent=shownSpeed;
  const needle=document.getElementById('speedNeedle');
  if(needle)needle.setAttribute('transform','rotate('+(-90+Math.min(400,shownSpeed)/400*180)+' 90 88)');
- document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
+ document.getElementById('nitroFill').style.height=nitro.toFixed(1)+'%';
  document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
 }
 
@@ -1271,7 +1306,7 @@ function buildTrackWorld(track){
   const nx=-slope/norm,nz=1/norm;
   const yaw=-Math.atan(slope);
   for(const side of [-1,1]){
-   const offset=track.scene==='grandprix'?27+Math.random()*8:34+Math.random()*22;
+   const offset=track.scene==='grandprix'?30+Math.random()*8:(['desert','canyon','mountain'].includes(track.scene)?58+Math.random()*22:40+Math.random()*18);
    const px=x+nx*side*offset,pz=z+nz*side*offset;
    if(track.scene==='city'){
     const w=15+Math.random()*13,d=13+Math.random()*12,h=18+Math.random()*38;
@@ -1308,8 +1343,8 @@ function buildTrackWorld(track){
      if(i%4===0){
       const duneMat=new THREE.MeshStandardMaterial({color:0xc5a267,roughness:1});
       const dune=new THREE.Mesh(hillGeometries[i%hillGeometries.length],duneMat);
-      dune.scale.set(28+Math.random()*18,8+Math.random()*5,22+Math.random()*12);
-      addRoadside(dune,px+side*14,4,pz+side*7,yaw);
+      dune.scale.set(20+Math.random()*12,7+Math.random()*4,16+Math.random()*8);
+      addRoadside(dune,px+side*18,3.5,pz+side*10,yaw);
      }
     }else{
      const cactusMat=new THREE.MeshStandardMaterial({color:0x467348});
@@ -1472,7 +1507,7 @@ function showSettings(){
  '<select id="cameraSelect" aria-label="Camera"><option value="chase" '+(cameraMode==='chase'?'selected':'')+'>Chase Camera</option><option value="hood" '+(cameraMode==='hood'?'selected':'')+'>Hood Camera</option></select>'+
  '<select id="graphicsSelect" aria-label="Graphics quality"><option value="high" '+(graphicsQuality==='high'?'selected':'')+'>Graphics: High</option><option value="low" '+(graphicsQuality==='low'?'selected':'')+'>Graphics: Performance</option></select>'+
  '<button data-action="sound" class="secondary">ENGINE SOUND: '+(soundEnabled?'ON':'OFF')+'</button>'+
- '<p>CONTROLS<br>W / ↑ Gas · S Reverse · ↓ Brake · A/D Steer · Shift / X Nitro</p><button data-menu="main">BACK</button>';
+ '<p>CONTROLS<br>W / ↑ Gas · ↓ Brake / Reverse · A/D Steer · Shift / X Nitro</p><button data-menu="main">BACK</button>';
 }
 function showPauseMenu(){
  paused=true;document.body.classList.add('paused');
@@ -1491,7 +1526,7 @@ message.addEventListener('click',e=>{
  else if(b.dataset.menu==='garage')showGarage();
  else if(b.dataset.menu==='settings')showSettings();
  else if(b.dataset.menu==='main')showMainMenu();
- else if(b.dataset.track!==undefined){selectedTrack=Number(b.dataset.track)||0;showRaceSetup();}
+ else if(b.dataset.track!==undefined){selectedTrack=Number(b.dataset.track)||0;startGame();}
  else if(b.id==='start')startGame();
  else if(b.dataset.action==='again')startGame();
  else if(b.dataset.action==='resume'){paused=false;document.body.classList.remove('paused');message.style.display='none';}
@@ -1573,13 +1608,13 @@ function updatePlayer(dt){
   speed*=Math.exp(-.11*dt);
  }
 
- // Rem memperlambat kecepatan menuju nol, bukan langsung mundur.
+ // Pedal gabungan: mengerem saat maju, lalu mundur setelah kecepatan nol.
  if(keys.brake){
-  if(speed>0)speed=Math.max(0,speed-7*dt);
-  else if(speed<0)speed=Math.min(0,speed+7*dt);
+  if(speed>0)speed=Math.max(0,speed-9*dt);
+  else speed=Math.max(-MAX_REVERSE,speed-5*dt);
  }
 
- nitroActive=keys.nitro&&keys.gas&&nitro>0&&speed>2;
+ nitroActive=keys.nitro&&nitro>0;
  if(nitroActive){
   nitro=Math.max(0,nitro-24*dt);
   speed+=11*dt;
