@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>1711 Racing 3D</title>
+<title>Teteng Racing</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;overflow:hidden;background:#111820;color:white;font-family:Arial,sans-serif}
@@ -25,6 +25,23 @@ canvas{display:block}
 button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:800;padding:12px;cursor:pointer;touch-action:none}
 #message button{width:100%;margin-top:8px}
 #message .accent{color:#ff5b35}
+#message.home-menu{position:static;transform:none;width:100%;height:100%;max-width:none;padding:0;background:transparent;border:0;border-radius:0;pointer-events:none;overflow:visible}
+.home-brand{position:fixed;top:10%;left:7%;text-align:left;pointer-events:none;text-shadow:0 3px 18px #000}
+.home-brand h1{font-size:clamp(28px,5vw,58px)!important;letter-spacing:3px;margin:8px 0!important}
+.home-brand p{font-size:11px!important;letter-spacing:4px;color:#d0d7df!important;margin:0}
+.brand-mark{display:inline-grid;place-items:center;width:42px;height:42px;border:2px solid #ff5b35;border-radius:12px;color:#ff5b35;font-size:26px;font-weight:1000}
+.home-actions{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);width:min(560px,80vw);display:flex;gap:12px;pointer-events:auto}
+#message .home-actions button{flex:1;min-height:54px;font-size:14px;letter-spacing:2px;border-radius:12px}
+#message .gear-button{position:fixed;top:14px;right:16px;width:42px;height:42px;margin:0;padding:0;border-radius:50%;background:#0d1219d9;border:1px solid #ffffff40;color:#fff;font-size:19px;pointer-events:auto}
+#analogSpeedo{width:174px;height:105px;align-self:flex-end;margin:0 10px -3px;flex:0 0 174px;pointer-events:none;filter:drop-shadow(0 3px 8px #000b)}
+#analogSpeedo svg{width:100%;height:100%;display:block}
+#controls{align-items:flex-end;justify-content:space-between;gap:8px}
+#controls .steering-group{flex:0 0 auto}
+#controls .controlgroup:last-child{flex:0 0 auto}
+body:not(.racing) #analogSpeedo{display:none}
+body.racing .stats .stat:last-child{display:none}
+body.racing #position{display:none}
+body:not(.racing) .topbar{display:none}
 #message .secondary{background:#202833;border:1px solid #ffffff24}
 #message .track-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:12px}
 #message .track-card{min-height:70px;text-align:left;background:#171d25;border:1px solid #ffffff20;padding:10px}
@@ -57,6 +74,19 @@ body.paused #controls{display:none}
  .stats .stat:last-child{bottom:96px;min-width:82px;padding:6px 10px}
  .stats .stat:last-child strong{font-size:26px}
  #message{top:50%;left:50%;transform:translate(-50%,-50%);width:min(92%,560px);max-height:88vh;overflow-y:auto;padding:15px}
+ #message.home-menu{top:0;left:0;transform:none;width:100%;height:100%;max-height:none;overflow:visible}
+ .home-brand{top:12%;left:6%}
+ .home-brand h1{font-size:clamp(25px,7vw,42px)!important}
+ .home-actions{bottom:18px;width:88vw;gap:8px}
+ #message .home-actions button{min-height:48px;font-size:12px}
+ #message .gear-button{top:10px;right:10px}
+ #analogSpeedo{width:124px;height:76px;flex-basis:124px;margin:0 3px -1px}
+ #controls{gap:3px;padding:0 7px}
+ #controls .controlgroup{gap:4px}
+ #controls .ctrl{width:40px}
+ #controls .ctrl.pedal{width:46px}
+ #controls .ctrl.nitro{width:45px}
+
  #message .track-grid{gap:5px}
  #message .track-card{min-height:58px;padding:7px}
  #message .track-card strong{font-size:10px}
@@ -115,19 +145,16 @@ body.paused #controls{display:none}
       <div class="small">3D CIRCUIT</div>
     </div>
     <div class="stats">
-      <div class="panel stat"><strong id="position">4/4</strong><span>POSISI</span></div>
       <div class="panel stat"><strong id="lap">0%</strong><span>PROGRES</span></div>
       <div class="panel stat"><strong id="remaining">7.6</strong><span>SISA KM</span></div>
       <div class="panel stat"><strong id="speed">0</strong><span>KM/J</span></div>
     </div>
   </div>
 
-  <div id="message">
-    <h1>1711 <span class="accent">RACING 3D</span></h1>
-    <p>Choose your car. Own the circuit.</p>
-    <button data-menu="play">PLAY</button>
-    <button data-menu="garage" class="secondary">GARAGE</button>
-    <button data-menu="settings" class="secondary">SETTINGS</button>
+  <div id="message" class="home-menu">
+    <div class="home-brand"><span class="brand-mark">T</span><h1>TETENG <span class="accent">RACING</span></h1><p>DRIVE YOUR OWN LINE</p></div>
+    <button class="gear-button" data-menu="settings" aria-label="Settings" title="Settings">⚙</button>
+    <div class="home-actions"><button data-menu="play">PLAY</button><button data-menu="garage" class="secondary">SELECT CAR</button></div>
   </div>
 
   <div id="minimap" class="panel" aria-label="Circuit minimap">
@@ -144,9 +171,21 @@ body.paused #controls{display:none}
   <div id="countdown">3</div>
   <div id="nitroWrap"><div id="nitroLabel">⚡ NITRO <span id="nitroPct">100%</span></div><div id="nitroTrack"><div id="nitroFill"></div></div></div>
   <div id="controls">
-    <div class="controlgroup">
-      <button class="ctrl" data-control="left">◀</button>
-      <button class="ctrl" data-control="right">▶</button>
+    <div class="controlgroup steering-group">
+      <button class="ctrl" data-control="left" aria-label="Steer left">◀</button>
+      <button class="ctrl" data-control="right" aria-label="Steer right">▶</button>
+    </div>
+    <div id="analogSpeedo" aria-label="Analog speedometer">
+      <svg viewBox="0 0 180 108" role="img" aria-label="Speed in kilometers per hour">
+        <path d="M18 88 A72 72 0 0 1 162 88" fill="none" stroke="#27313b" stroke-width="13" stroke-linecap="round"/>
+        <path d="M18 88 A72 72 0 0 1 162 88" fill="none" stroke="#ff5b35" stroke-width="3" stroke-linecap="round"/>
+        <g id="speedTicks" stroke="#d9e2ea" stroke-width="2" stroke-linecap="round"></g>
+        <g id="speedLabels" fill="#e7edf3" font-size="9" font-weight="700" text-anchor="middle"></g>
+        <line id="speedNeedle" x1="90" y1="88" x2="90" y2="30" stroke="#ff4934" stroke-width="3.2" stroke-linecap="round" transform="rotate(-135 90 88)"/>
+        <circle cx="90" cy="88" r="6" fill="#f5f7fa" stroke="#ff4934" stroke-width="2"/>
+        <text id="analogSpeedValue" x="90" y="72" text-anchor="middle" fill="#ffffff" font-size="20" font-weight="900">0</text>
+        <text x="90" y="101" text-anchor="middle" fill="#b8c6d3" font-size="8" letter-spacing="1.3">KM/H</text>
+      </svg>
     </div>
     <div class="controlgroup">
       <button class="ctrl reverse" data-control="reverse" aria-label="Mundur">R</button>
@@ -938,10 +977,14 @@ function updateHUD(){
  updateMinimapDot(track);
  document.getElementById('lap').textContent=Math.floor(progress*100)+'%';
  document.getElementById('remaining').textContent=(track.distance*(1-progress)/1000).toFixed(2);
- document.getElementById('speed').textContent=Math.round(Math.abs(speed)*2.25);
+ const shownSpeed=Math.round(Math.abs(speed)*2.25);
+ document.getElementById('speed').textContent=shownSpeed;
+ const analogValue=document.getElementById('analogSpeedValue');
+ if(analogValue)analogValue.textContent=shownSpeed;
+ const needle=document.getElementById('speedNeedle');
+ if(needle)needle.setAttribute('transform','rotate('+(-135+Math.min(400,shownSpeed)/400*270)+' 90 88)');
  document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
  document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
- document.getElementById('position').textContent='—';
 }
 
 // Audio sintetis supercar V12: bass lebih tebal, makin meraung mengikuti kecepatan.
@@ -1127,15 +1170,16 @@ function buildTrackWorld(track){
  const curbRed=new THREE.MeshStandardMaterial({color:0xe84232});
  const curbWhite=new THREE.MeshStandardMaterial({color:0xf5f5ed});
  const vertices=[],indices=[],edges=[],centerDashes=[];
- const samples=Math.ceil(track.distance/8),halfWidth=13;
+ const approach=240,runout=260,roadStart=START_LINE_X-approach,roadEnd=START_LINE_X+track.distance+runout;
+ const samples=Math.ceil((roadEnd-roadStart)/8),halfWidth=13;
  for(let i=0;i<=samples;i++){
-  const x=START_LINE_X+i/samples*track.distance,z=routeCenter(x,track);
+  const x=roadStart+i/samples*(roadEnd-roadStart),z=routeCenter(x,track);
   vertices.push(x,-.08,z-halfWidth,x,-.08,z+halfWidth);
   if(i<samples){const k=i*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}
  }
  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();add(new THREE.Mesh(geo,roadMaterial));
  for(let i=0;i<=samples;i+=3){
-  const x=START_LINE_X+i/samples*track.distance,z=routeCenter(x,track),slope=routeSlope(x,track);
+  const x=roadStart+i/samples*(roadEnd-roadStart),z=routeCenter(x,track),slope=routeSlope(x,track);
   const yaw=Math.atan(slope);
   for(const side of [-1,1]){
    const stripe=new THREE.Mesh(new THREE.BoxGeometry(8,.035,.18),edgeMaterial);
@@ -1194,9 +1238,9 @@ function buildTrackWorld(track){
  const buildingMatsLocal=[0x8797a4,0x9ca8ad,0x657785,0xb2b0a5].map(color=>new THREE.MeshStandardMaterial({color,roughness:.9}));
  const railMat=new THREE.MeshStandardMaterial({color:track.scene==='grandprix'?0xe5e7eb:0x8b969c,metalness:.25,roughness:.6});
  const addRoadside=(mesh,x,y,z,yaw=0)=>{mesh.position.set(x,y,z);mesh.rotation.y=yaw;mesh.castShadow=true;add(mesh);return mesh;};
- const samplesEnv=Math.floor(track.distance/70);
+ const samplesEnv=Math.floor((track.distance+approach+runout)/55);
  for(let i=0;i<samplesEnv;i++){
-  const x=START_LINE_X+45+i*70;
+  const x=roadStart+28+i*55;
   const z=routeCenter(x,track);
   const slope=routeSlope(x,track);
   const norm=Math.sqrt(1+slope*slope);
@@ -1275,6 +1319,7 @@ function finishRace(){
  if(raceOver)return;
  raceOver=true;running=false;paused=false;playerFinished=true;speed=0;nitroActive=false;
  document.body.classList.remove('racing','paused');
+ message.className='';
  message.innerHTML='<h1>🏁 RACE COMPLETE</h1><p>'+trackOptions[selectedTrack].name+
   '<br>Time: '+elapsed.toFixed(2)+' s<br>Distance: '+(trackOptions[selectedTrack].distance/1000).toFixed(1)+' km<br>100% COMPLETE</p>'+
   '<button data-action="again">RACE AGAIN</button><button data-menu="play" class="secondary">CIRCUIT SELECT</button><button data-menu="main" class="secondary">MAIN MENU</button>';
@@ -1302,7 +1347,7 @@ function startGame(){
  drawMinimap(track);
  scene.background.setHex(track.sky);scene.fog.color.setHex(track.sky);
  buildTrackWorld(track);
- document.querySelector('.brand').innerHTML='1711 <span>RACING</span>';
+ document.querySelector('.brand').innerHTML='TETENG <span>RACING</span>';
  document.querySelector('.small').textContent=track.name.toUpperCase();
  document.getElementById('hint').textContent=track.name+' — '+(track.distance/1000).toFixed(1)+' km, ikuti tikungan sampai FINISH!';
  speed=0;nitro=100;nitroActive=false;heading=Math.PI/2;steeringInput=0;
@@ -1318,6 +1363,26 @@ function startGame(){
  updateHUD();
 }
 
+function buildSpeedometer(){
+ const ticks=document.getElementById('speedTicks'),labels=document.getElementById('speedLabels');
+ if(!ticks||!labels||ticks.childElementCount)return;
+ for(let i=0;i<=20;i++){
+  const angle=(-135+i*13.5)*Math.PI/180;
+  const major=i%4===0;
+  const r1=major?59:64,r2=70;
+  const x1=90+Math.cos(angle)*r1,y1=88+Math.sin(angle)*r1;
+  const x2=90+Math.cos(angle)*r2,y2=88+Math.sin(angle)*r2;
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',x1);line.setAttribute('y1',y1);line.setAttribute('x2',x2);line.setAttribute('y2',y2);
+  line.setAttribute('stroke',major?'#f3f6f9':'#8b98a5');line.setAttribute('stroke-width',major?'2.5':'1.3');ticks.appendChild(line);
+  if(major){
+   const val=i*20,lr=48;
+   const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+   txt.setAttribute('x',90+Math.cos(angle)*lr);txt.setAttribute('y',88+Math.sin(angle)*lr+3);
+   txt.textContent=val;labels.appendChild(txt);
+  }
+ }
+}
 function carSelectMarkup(){
  const names=['Racing Red','Electric Blue','Sunset Yellow','Pearl White','Emerald Green','Midnight Purple'];
  return '<select id="carSelect" aria-label="Choose car">'+names.map((n,i)=>'<option value="'+i+'" '+(i===selectedCar?'selected':'')+'>'+n+'</option>').join('')+'</select>';
@@ -1327,24 +1392,29 @@ function showMainMenu(){
  document.getElementById('countdown').style.display='none';
  document.body.classList.remove('racing','paused');
  message.style.display='block';
- message.innerHTML='<h1>1711 <span class="accent">RACING 3D</span></h1><p>Choose your car. Own the circuit.</p><button data-menu="play">PLAY</button><button data-menu="garage" class="secondary">GARAGE</button><button data-menu="settings" class="secondary">SETTINGS</button>';
+ message.className='home-menu';
+ message.innerHTML='<div class="home-brand"><span class="brand-mark">T</span><h1>TETENG <span class="accent">RACING</span></h1><p>DRIVE YOUR OWN LINE</p></div><button class="gear-button" data-menu="settings" aria-label="Settings" title="Settings">⚙</button><div class="home-actions"><button data-menu="play">PLAY</button><button data-menu="garage" class="secondary">SELECT CAR</button></div>';
 }
 function showCircuitSelect(){
+ message.className='';
  message.style.display='block';
  message.innerHTML='<h1>SELECT CIRCUIT</h1><p>Seven routes. One continuous run to the finish.</p><div class="track-grid">'+trackOptions.map((t,i)=>'<button class="track-card" data-track="'+i+'"><strong>'+(i+1)+'. '+t.name+'</strong><small>'+(t.distance/1000).toFixed(1)+' km · NORMAL</small></button>').join('')+'</div><button data-menu="main" class="secondary">BACK</button>';
 }
 function showRaceSetup(){
  const t=trackOptions[selectedTrack];
+ message.className='';
  message.style.display='block';
  message.innerHTML='<h1>RACE SETUP</h1><p>'+t.name+' · '+(t.distance/1000).toFixed(1)+' km · NORMAL</p>'+carSelectMarkup()+
  '<select id="cameraSelect" aria-label="Camera"><option value="chase" '+(cameraMode==='chase'?'selected':'')+'>Chase Camera</option><option value="hood" '+(cameraMode==='hood'?'selected':'')+'>Hood Camera</option></select>'+
  '<button id="start">START RACE</button><button data-menu="play" class="secondary">BACK TO CIRCUITS</button>';
 }
 function showGarage(){
+ message.className='';
  message.style.display='block';
  message.innerHTML='<h1>GARAGE</h1><p>Choose a body color for your racing car.</p>'+carSelectMarkup()+'<button data-menu="main">DONE</button>';
 }
 function showSettings(){
+ message.className='';
  message.style.display='block';
  message.innerHTML='<h1>SETTINGS</h1><p>Adjust the race presentation.</p>'+
  '<select id="cameraSelect" aria-label="Camera"><option value="chase" '+(cameraMode==='chase'?'selected':'')+'>Chase Camera</option><option value="hood" '+(cameraMode==='hood'?'selected':'')+'>Hood Camera</option></select>'+
@@ -1354,6 +1424,7 @@ function showSettings(){
 }
 function showPauseMenu(){
  paused=true;document.body.classList.add('paused');
+ message.className='';
  message.style.display='block';
  message.innerHTML='<h1>PAUSED</h1><button data-action="resume">RESUME</button><button data-action="again" class="secondary">RESTART</button><button data-menu="main" class="secondary">EXIT TO MAIN MENU</button>';
 }
@@ -1615,6 +1686,7 @@ function animate(){
  renderer.render(scene,camera);
 }
 
+buildSpeedometer();
 showMainMenu();
 applyCarChoice(selectedCar);
 animate();
