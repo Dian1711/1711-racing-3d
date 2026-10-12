@@ -428,10 +428,10 @@ function updateHUD(){
   (ranks.findIndex(r=>r.isPlayer)+1)+'/4';
 }
 
-// Suara mesin bergaya F1: RPM naik selama gas ditahan, lalu turun saat gas dilepas.
+// Suara mesin supercar V12 bernada bass, dengan kenaikan RPM lebih panjang dan bertahap.
 let audioContext=null,engineOsc=null,engineOsc2=null,engineOsc3=null,nitroOsc=null,nitroNoise=null;
 let engineGain=null,engineGain2=null,engineGain3=null,nitroGain=null,engineFilter=null,nitroFilter=null;
-let engineRPM=0;
+let engineRPM=0,nitroRocketPitch=0;
 
 function initAudio(){
  try{
@@ -440,16 +440,17 @@ function initAudio(){
   if(!audioContext){
    audioContext=new AudioCtx();
 
+   // Lapisan rendah memberi karakter mesin V12 yang berat dan menggelegar.
    engineFilter=audioContext.createBiquadFilter();
    engineFilter.type='lowpass';
-   engineFilter.frequency.value=1000;
-   engineFilter.Q.value=1.2;
+   engineFilter.frequency.value=700;
+   engineFilter.Q.value=1.8;
 
    engineGain=audioContext.createGain();
    engineGain.gain.value=0;
    engineOsc=audioContext.createOscillator();
    engineOsc.type='sawtooth';
-   engineOsc.frequency.value=65;
+   engineOsc.frequency.value=48;
    engineOsc.connect(engineFilter);
    engineFilter.connect(engineGain);
    engineGain.connect(audioContext.destination);
@@ -458,10 +459,14 @@ function initAudio(){
    engineGain2=audioContext.createGain();
    engineGain2.gain.value=0;
    engineOsc2=audioContext.createOscillator();
-   engineOsc2.type='square';
-   engineOsc2.detune.value=7;
-   engineOsc2.frequency.value=95;
-   engineOsc2.connect(engineGain2);
+   engineOsc2.type='sawtooth';
+   engineOsc2.detune.value=-5;
+   engineOsc2.frequency.value=72;
+   const bassFilter=audioContext.createBiquadFilter();
+   bassFilter.type='lowpass';
+   bassFilter.frequency.value=520;
+   engineOsc2.connect(bassFilter);
+   bassFilter.connect(engineGain2);
    engineGain2.connect(audioContext.destination);
    engineOsc2.start();
 
@@ -469,22 +474,22 @@ function initAudio(){
    engineGain3.gain.value=0;
    engineOsc3=audioContext.createOscillator();
    engineOsc3.type='triangle';
-   engineOsc3.detune.value=-9;
-   engineOsc3.frequency.value=130;
+   engineOsc3.detune.value=8;
+   engineOsc3.frequency.value=105;
    engineOsc3.connect(engineGain3);
    engineGain3.connect(audioContext.destination);
    engineOsc3.start();
 
-   // Lapisan gemuruh dan desis berfilter untuk efek nitro seperti geledek.
+   // Nitro seperti roket: desis dorongan, gemuruh, dan pitch yang melesat naik.
    nitroFilter=audioContext.createBiquadFilter();
    nitroFilter.type='lowpass';
-   nitroFilter.frequency.value=900;
-   nitroFilter.Q.value=0.8;
+   nitroFilter.frequency.value=1200;
+   nitroFilter.Q.value=.7;
    nitroGain=audioContext.createGain();
    nitroGain.gain.value=0;
    nitroOsc=audioContext.createOscillator();
    nitroOsc.type='sawtooth';
-   nitroOsc.frequency.value=42;
+   nitroOsc.frequency.value=45;
    nitroOsc.connect(nitroFilter);
    nitroFilter.connect(nitroGain);
    nitroGain.connect(audioContext.destination);
@@ -499,10 +504,10 @@ function initAudio(){
    nitroNoise.loop=true;
    const noiseFilter=audioContext.createBiquadFilter();
    noiseFilter.type='bandpass';
-   noiseFilter.frequency.value=420;
-   noiseFilter.Q.value=.55;
+   noiseFilter.frequency.value=950;
+   noiseFilter.Q.value=.45;
    const noiseGain=audioContext.createGain();
-   noiseGain.gain.value=.0;
+   noiseGain.gain.value=0;
    nitroNoise.connect(noiseFilter);
    noiseFilter.connect(noiseGain);
    noiseGain.connect(audioContext.destination);
@@ -522,26 +527,30 @@ function updateSound(dt=1/60){
  const throttle=running&&keys.gas&&!keys.reverse?1:0;
  const moving=running?Math.min(1,Math.abs(speed)/MAX_SPEED):0;
 
- // Gas ditahan membuat putaran mesin terus naik walaupun kecepatan mulai stabil.
- if(throttle)engineRPM=Math.min(1,engineRPM+dt*.24);
- else engineRPM=Math.max(moving*.28,engineRPM-dt*.42);
- const rpm=0.12+engineRPM*.88;
- const baseFreq=58+rpm*235+(nitroActive?35:0);
+ // Dibuat lebih lama: sekitar 7–9 detik dari RPM rendah ke putaran tinggi.
+ if(throttle)engineRPM=Math.min(1,engineRPM+dt*.13);
+ else engineRPM=Math.max(moving*.22,engineRPM-dt*.22);
+ const rpm=.08+engineRPM*.92;
+ const baseFreq=43+rpm*142+(nitroActive?18:0);
 
- engineOsc.frequency.setTargetAtTime(baseFreq,now,.045);
- engineOsc2.frequency.setTargetAtTime(baseFreq*1.51,now,.05);
- engineOsc3.frequency.setTargetAtTime(baseFreq*2.02,now,.06);
- engineFilter.frequency.setTargetAtTime(650+rpm*3000,now,.07);
- engineGain.gain.setTargetAtTime(running?.012+rpm*.035:0,now,.08);
- engineGain2.gain.setTargetAtTime(running?.002+rpm*.009:0,now,.08);
- engineGain3.gain.setTargetAtTime(running?.003+rpm*.012:0,now,.08);
+ engineOsc.frequency.setTargetAtTime(baseFreq,now,.09);
+ engineOsc2.frequency.setTargetAtTime(baseFreq*1.48,now,.11);
+ engineOsc3.frequency.setTargetAtTime(baseFreq*2.05,now,.12);
+ engineFilter.frequency.setTargetAtTime(420+rpm*1650,now,.13);
+ engineGain.gain.setTargetAtTime(running?.018+rpm*.052:0,now,.12);
+ engineGain2.gain.setTargetAtTime(running?.012+rpm*.026:0,now,.13);
+ engineGain3.gain.setTargetAtTime(running?.002+rpm*.009:0,now,.14);
 
- const thunder=running&&nitroActive;
- nitroOsc.frequency.setTargetAtTime(thunder?38+Math.random()*24:38,now,.035);
- nitroFilter.frequency.setTargetAtTime(thunder?500+Math.random()*700:450,now,.05);
- nitroGain.gain.setTargetAtTime(thunder?.035:0,now,.045);
+ const rocket=running&&nitroActive;
+ if(rocket)nitroRocketPitch=Math.min(1,nitroRocketPitch+dt*.7);
+ else nitroRocketPitch=Math.max(0,nitroRocketPitch-dt*1.8);
+ const rocketPitch=rocket?nitroRocketPitch:0;
+ nitroOsc.frequency.setTargetAtTime(rocket?48+rocketPitch*155:42,now,.08);
+ nitroFilter.frequency.setTargetAtTime(rocket?650+rocketPitch*2600:500,now,.09);
+ nitroGain.gain.setTargetAtTime(rocket?.025+rocketPitch*.035:0,now,.08);
  if(nitroGain.noiseGain){
-  nitroGain.noiseGain.gain.setTargetAtTime(thunder?.018:0,now,.04);
+  nitroGain.noiseFilter.frequency.setTargetAtTime(rocket?700+rocketPitch*3200:600,now,.08);
+  nitroGain.noiseGain.gain.setTargetAtTime(rocket?.008+rocketPitch*.035:0,now,.08);
  }
 }
 
