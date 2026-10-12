@@ -29,11 +29,15 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
 #controls{position:absolute;bottom:20px;left:0;right:0;display:flex;justify-content:space-between;padding:0 12px;pointer-events:none}
 .controlgroup{display:flex;gap:7px;pointer-events:auto}
 .ctrl{width:54px;height:56px;border-radius:15px;background:#18232ddd;border:1px solid #ffffff55;font-size:21px;user-select:none}
-.ctrl.gas{background:#dc492bde}
-.ctrl.brake{background:#394b60e8;font-size:11px}
-.ctrl.reverse{background:#7851a9;font-size:11px}
+.ctrl.reverse{background:#252b34;border-color:#ff5b3566;font-size:13px}
+.ctrl.pedal{width:62px;height:78px;display:flex;align-items:flex-end;justify-content:center;padding:0 0 11px;clip-path:polygon(13% 0,87% 0,100% 100%,0 100%);border:0;border-radius:7px 7px 12px 12px;box-shadow:inset 0 0 0 2px #ffffff45, inset 0 10px 16px #ffffff18;position:relative;font-size:11px;letter-spacing:1px}
+.ctrl.pedal:before{content:"";position:absolute;left:22%;right:22%;top:12px;height:34px;border-radius:4px;background:repeating-linear-gradient(0deg,#101820 0 4px,#68737c 4px 7px);opacity:.8}
+.ctrl.pedal span{position:relative;z-index:1;text-shadow:0 1px 3px #000}
+.ctrl.gas{background:linear-gradient(135deg,#ff6a3d,#a91f16);border-color:#ffb39f}
+.ctrl.brake{background:linear-gradient(135deg,#aab5c0,#3b4653);color:#111820;border-color:#eef2f5}
+.ctrl.nitro{width:60px;height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:linear-gradient(145deg,#16b8ff,#075b9e);border:1px solid #9be8ff;font-size:22px;box-shadow:0 0 12px #1685c755}
+.ctrl.nitro small{font-size:9px;font-weight:900;letter-spacing:.6px}
 #hint{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:10px;color:#ffffffa8;white-space:nowrap}
-.ctrl.nitro{background:#1685c7;font-size:11px}
 #nitroWrap{position:absolute;top:82px;right:12px;width:118px;background:#101820dc;border:1px solid #ffffff26;border-radius:9px;padding:6px}
 #nitroLabel{font-size:10px;font-weight:800;margin-bottom:5px;color:#7bd7ff}
 #nitroTrack{height:7px;background:#334155;border-radius:8px;overflow:hidden}
@@ -48,6 +52,10 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
  .stat span{font-size:8px}
  #speed{font-size:18px}
  .ctrl{width:45px;height:50px}
+ .ctrl.pedal{width:52px;height:69px;padding-bottom:9px}
+ .ctrl.pedal:before{top:10px;height:30px}
+ .ctrl.nitro{width:52px;height:56px;font-size:19px}
+ .ctrl.nitro small{font-size:8px}
  #controls{padding:0 7px;bottom:19px}
  #nitroWrap{top:66px;right:7px;width:95px}
  .ctrl.nitro{font-size:10px}
@@ -85,6 +93,14 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
       <option value="5">6. Midnight Mountain — 9,6 km · Pegunungan</option>
       <option value="6">7. World Grand Prix — 10 km · Sirkuit</option>
     </select>
+    <select id="carSelect" aria-label="Pilih mobil">
+      <option value="0">Mobil: Racing Red</option>
+      <option value="1">Mobil: Electric Blue</option>
+      <option value="2">Mobil: Sunset Yellow</option>
+      <option value="3">Mobil: Pearl White</option>
+      <option value="4">Mobil: Emerald Green</option>
+      <option value="5">Mobil: Midnight Purple</option>
+    </select>
     <button id="start">MULAI BALAPAN</button>
     <p>W / ↑ Gas · S Mundur · ↓ Rem · A/D Belok · Shift / X Nitro</p>
   </div>
@@ -97,10 +113,10 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
       <button class="ctrl" data-control="right">▶</button>
     </div>
     <div class="controlgroup">
-      <button class="ctrl reverse" data-control="reverse">MUNDUR</button>
-      <button class="ctrl brake" data-control="brake">REM</button>
-      <button class="ctrl nitro" data-control="nitro">NITRO</button>
-      <button class="ctrl gas" data-control="gas">▲</button>
+      <button class="ctrl reverse" data-control="reverse" aria-label="Mundur">R</button>
+      <button class="ctrl pedal brake" data-control="brake" aria-label="Pedal rem"><span>REM</span></button>
+      <button class="ctrl nitro" data-control="nitro" aria-label="Nitro roket">🚀<small>NITRO</small></button>
+      <button class="ctrl pedal gas" data-control="gas" aria-label="Pedal gas"><span>GAS</span></button>
     </div>
   </div>
   <div id="hint">Ikuti lintasan dan hindari rumput!</div>
@@ -491,7 +507,7 @@ function createCar(color){
   yellowCore.rotation.x=Math.PI/2;yellowCore.position.set(0,0,-.025);flameGroup.add(yellowCore);
   flameGroup.position.set(x,.48,1.58);flameGroup.visible=false;g.add(flameGroup);nitroFlames.push(flameGroup);
  }
- g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;
+ g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;g.userData.paintMaterial=paint;
  scene.add(g);return g;
 }
 function placeCar(car,t,lane=0){
@@ -1177,9 +1193,18 @@ function finishRace(){
  document.getElementById('restart').addEventListener('click',startGame);
 }
 
+const playerPaints=[0xd92724,0x2476d2,0xf2c230,0xeeeeee,0x18a558,0x7138b5];
+let selectedCar=0;
+function applyCarChoice(index){
+ selectedCar=THREE.MathUtils.clamp(Number(index)||0,0,playerPaints.length-1);
+ player.userData.paintMaterial.color.setHex(playerPaints[selectedCar]);
+}
 function startGame(){
  initAudio();
- selectedTrack=Number(document.getElementById('trackSelect').value)||0;
+ const trackPicker=document.getElementById('trackSelect');
+ if(trackPicker)selectedTrack=THREE.MathUtils.clamp(Number(trackPicker.value)||0,0,trackOptions.length-1);
+ const carPicker=document.getElementById('carSelect');
+ if(carPicker)applyCarChoice(carPicker.value);
  const track=trackOptions[selectedTrack];
  finishLineX=START_LINE_X+track.distance;
  scene.background.setHex(track.sky);scene.fog.color.setHex(track.sky);
@@ -1199,6 +1224,7 @@ function startGame(){
 }
 
 document.getElementById('start').addEventListener('click',startGame);
+document.getElementById('carSelect').addEventListener('change',e=>applyCarChoice(e.target.value));
 
 // Tombol layar sentuh.
 document.querySelectorAll('[data-control]').forEach(btn=>{
