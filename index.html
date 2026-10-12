@@ -389,17 +389,14 @@ function createCar(color){
  for(const x of [-.51,.51]){
   add(new THREE.BoxGeometry(.10,.30,.12),paint,[x,.99,1.02]);
  }
- // Behel/roll hoop belakang dibuat lebih lebar dengan warna titanium-gold.
- const behelMat=new THREE.MeshStandardMaterial({color:0xd5a447,metalness:.78,roughness:.24});
- const behelHighlight=mat(0xffe4a0,.28);
- for(const x of [-.64,.64]){
-  add(new THREE.BoxGeometry(.09,.40,.085),dark,[x,1.13,.76]);
-  add(new THREE.BoxGeometry(.052,.36,.052),behelMat,[x,1.14,.70]);
-  add(new THREE.BoxGeometry(.026,.32,.025),behelHighlight,[x-.018,1.15,.669]);
+ // Behel belakang lebar tetapi rendah dan menyatu dengan gaya mobil balap.
+ const behelAccent=mat(0xf3442e,.32);
+ for(const x of [-.52,.52]){
+  add(new THREE.BoxGeometry(.075,.27,.075),dark,[x,1.00,.76]);
+  add(new THREE.BoxGeometry(.032,.22,.035),behelAccent,[x,1.01,.716]);
  }
- add(new THREE.BoxGeometry(1.40,.09,.085),dark,[0,1.32,.76]);
- add(new THREE.BoxGeometry(1.28,.052,.052),behelMat,[0,1.36,.705]);
- add(new THREE.BoxGeometry(1.12,.022,.026),behelHighlight,[0,1.395,.675]);
+ add(new THREE.BoxGeometry(1.18,.075,.075),dark,[0,1.14,.76]);
+ add(new THREE.BoxGeometry(.94,.022,.025),behelAccent,[0,1.185,.716]);
  // Sirip aerodinamis tengah (shark fin) mengalir dari kokpit ke sayap belakang.
  const finShape=new THREE.Shape();
  finShape.moveTo(-.48,.02);
@@ -432,7 +429,11 @@ function createCar(color){
  // Four exposed racing tyres, placed outside the chassis.
  const wheels=[];
  for(const x of [-1.02,1.02])for(const z of [-1.25,1.18]){
+  // Pivot terpisah untuk setir; putaran ban tidak lagi bercampur dengan sudut belok.
+  const steeringPivot=new THREE.Group();
+  steeringPivot.position.set(x,.36,z);
   const w=new THREE.Group();
+  steeringPivot.add(w);
   const tire=new THREE.Mesh(new THREE.CylinderGeometry(.37,.37,.30,32),rubber);
   tire.rotation.z=Math.PI/2;w.add(tire);
   const rimMesh=new THREE.Mesh(new THREE.CylinderGeometry(.235,.235,.315,24),rim);
@@ -454,11 +455,10 @@ function createCar(color){
   // Satu tanda warna di sisi velg jadi penunjuk visual saat roda berputar.
   const marker=new THREE.Mesh(new THREE.BoxGeometry(.035,.075,.09),spokeAccent);
   marker.position.set(0,.19,.07);w.add(marker);
-  w.position.set(x,.36,z);
-  // Roda depan bisa membelok mengikuti input setir.
-  w.userData.front=z<0;
+  w.position.set(0,0,0);
   w.children.forEach(o=>{o.castShadow=true;o.receiveShadow=true;});
-  g.add(w);wheels.push(w);
+  g.add(steeringPivot);
+  wheels.push({wheel:w,pivot:steeringPivot,front:z<0});
  }
  // Visible suspension arms between the chassis and the exposed wheels.
  for(const x of [-1,1]){
@@ -1090,9 +1090,9 @@ function updatePlayer(dt){
  // Putaran roda dibuat terbaca, tidak terlalu cepat hingga terlihat seperti roda polos.
  const wheelSpin=speed*dt*.42;
  player.userData.wheels.forEach(w=>{
-  w.rotation.x+=wheelSpin;
-  // Sudut roda depan ikut belok, lalu kembali lurus ketika setir dilepas.
-  w.rotation.y=w.userData.front? -steeringInput*.48:0;
+  // Putaran ban dan arah setir memakai sumbu terpisah agar ban tetap stabil.
+  w.wheel.rotation.x+=wheelSpin;
+  w.pivot.rotation.y=w.front? -steeringInput*.48:0;
  });
 
 
@@ -1151,7 +1151,7 @@ function updateAI(dt){
 
   a.progress+=a.speed*dt;
   placeCar(a.car,a.progress,a.lane);
-  a.car.userData.wheels.forEach(w=>w.rotation.x+=a.speed*dt*35);
+  a.car.userData.wheels.forEach(w=>w.wheel.rotation.x+=a.speed*dt*35);
 
   if(a.progress>=FINISH_PROGRESS){
    a.progress=FINISH_PROGRESS;
