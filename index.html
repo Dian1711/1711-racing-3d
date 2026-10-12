@@ -443,6 +443,7 @@ const keys={left:false,right:false,gas:false,brake:false,reverse:false,nitro:fal
 let nitro=100,nitroActive=false;
 let running=false,playerFinished=false,raceOver=false;
 let speed=0,heading=Math.PI/2;
+let steeringInput=0;
 let playerProgress=0,lastAngle=0,elapsed=0;
 let collisionCooldown=0;
 const TOTAL_LAPS=3;
@@ -609,6 +610,7 @@ function startGame(){
  speed=0;
  nitro=100;nitroActive=false;
  heading=Math.PI/2;
+ steeringInput=0;
  playerProgress=0;
  lastAngle=0;
  elapsed=0;
@@ -721,16 +723,18 @@ function updatePlayer(dt){
 
  const steering=(keys.right?1:0)-(keys.left?1:0);
  const speedFraction=Math.min(1,Math.abs(speed)/MAX_SPEED);
- // Setir progresif: lebih responsif saat melaju, tetapi tidak langsung membelok tajam.
+ // Input setir naik/turun secara bertahap agar mobil tidak langsung menyentak.
+ const steeringSmooth=1-Math.exp(-dt*3.2);
+ steeringInput+=(steering-steeringInput)*steeringSmooth;
  if(Math.abs(speed)>.3){
   const reverseFactor=speed>=0?1:-1;
-  const turnRate=1.75;
-  const steeringResponse=0.35+speedFraction*0.65;
-  heading-=steering*turnRate*dt*steeringResponse*reverseFactor;
+  const turnRate=1.35;
+  const steeringResponse=0.28+speedFraction*0.72;
+  heading-=steeringInput*turnRate*dt*steeringResponse*reverseFactor;
  }
- // Sedikit body roll visual saat membelok, dengan kemiringan yang halus.
- const targetRoll=-steering*speedFraction*0.045;
- player.rotation.z+=(targetRoll-player.rotation.z)*(1-Math.exp(-dt*4.5));
+ // Body roll ringan dan lembut mengikuti setir yang sudah dihaluskan.
+ const targetRoll=-steeringInput*speedFraction*0.035;
+ player.rotation.z+=(targetRoll-player.rotation.z)*(1-Math.exp(-dt*3.2));
  player.rotation.y=heading+Math.PI;
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*1.15);
