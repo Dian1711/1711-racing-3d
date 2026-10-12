@@ -362,7 +362,7 @@ function placeCar(car,t,lane=0){
  const p=trackPoint(t).addScaledVector(trackNormal(t),lane);
  car.position.set(p.x,0,p.z);
  const d=trackTangent(t);
- car.rotation.y=Math.atan2(d.x,d.z);
+ car.rotation.y=Math.atan2(d.x,d.z)+Math.PI;
 }
 
 function forwardFromHeading(h){
@@ -428,7 +428,7 @@ function startGame(){
  raceOver=false;
 
  player.position.set(0,0,RZ);
- player.rotation.y=heading;
+ player.rotation.y=heading+Math.PI;
 
  ai.forEach((a,i)=>{
   a.progress=[.13,.25,.37][i];
@@ -520,7 +520,7 @@ function updatePlayer(dt){
   heading-=steering*1.8*dt*(.25+Math.abs(speed)/MAX_SPEED)*reverseFactor;
  }
 
- player.rotation.y=heading;
+ player.rotation.y=heading+Math.PI;
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*.6);
 
