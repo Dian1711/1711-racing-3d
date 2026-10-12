@@ -454,7 +454,7 @@ const message=document.getElementById('message');
 
 function updateHUD(){
  document.getElementById('lap').textContent='TEST';
- document.getElementById('speed').textContent=Math.round(Math.abs(speed)*4.2);
+ document.getElementById('speed').textContent=Math.round(Math.abs(speed)*2.25);
  document.getElementById('nitroFill').style.width=nitro.toFixed(1)+'%';
  document.getElementById('nitroPct').textContent=Math.round(nitro)+'%';
 
@@ -693,12 +693,12 @@ function updatePlayer(dt){
  // Gas dan mundur tidak aktif bersamaan.
  if(keys.gas&&!keys.reverse){
   // Di bawah 60 km/jam, kenaikan lebih halus dan lambat; setelah itu akselerasi tetap bertahap.
-  const lowSpeedFactor=Math.abs(speed)<(60/2.25)?0.72:1;
-  speed+=2.1*lowSpeedFactor*dt;
+  const lowSpeedFactor=Math.abs(speed)<(60/2.25)?1.25:1;
+  speed+=8.5*lowSpeedFactor*dt;
  }else if(keys.reverse&&!keys.gas){
   speed-=12*dt;
  }else if(!keys.brake){
-  speed*=Math.exp(-.075*dt);
+  speed*=Math.exp(-.11*dt);
  }
 
  // Rem memperlambat kecepatan menuju nol, bukan langsung mundur.
@@ -708,7 +708,7 @@ function updatePlayer(dt){
  }
 
  nitroActive=keys.nitro&&keys.gas&&nitro>0&&speed>2;
- if(nitroActive){nitro=Math.max(0,nitro-24*dt);speed+=4.5*dt;}
+ if(nitroActive){nitro=Math.max(0,nitro-24*dt);speed+=11*dt;}
  else nitro=Math.min(100,nitro+8*dt);
  speed=THREE.MathUtils.clamp(speed,-MAX_REVERSE,nitroActive?NITRO_SPEED:MAX_SPEED);
  player.userData.nitroFlames.forEach(f=>{f.visible=nitroActive; if(nitroActive)f.scale.setScalar(.75+Math.random()*.7);});
@@ -817,7 +817,7 @@ function animate(){
  updateSound(dt);
 
  const speedRatio=Math.min(1,Math.abs(speed)/MAX_SPEED);
- const cameraDistance=4.8+speedRatio*1.2+(nitroActive?.5:0);
+ const cameraDistance=4.8+speedRatio*1.2+(nitroActive?.15:0);
  const behind=new THREE.Vector3(
   -Math.sin(heading)*cameraDistance,
   3.0+speedRatio*.65,
@@ -825,9 +825,9 @@ function animate(){
  );
  const target=player.position.clone().add(behind);
  camera.position.lerp(target,.20+speedRatio*.12);
- camera.fov=72+speedRatio*15+(nitroActive?7:0);
+ camera.fov=72+speedRatio*12+(nitroActive?2:0);
  camera.updateProjectionMatrix();
- const shake=speedRatio*.045+(nitroActive?.06:0);
+ const shake=speedRatio*.012+(nitroActive?.004:0);
  camera.position.y+=Math.sin(performance.now()*.035)*shake;
  camera.lookAt(player.position.x,player.position.y+1.2,player.position.z);
  renderer.render(scene,camera);
