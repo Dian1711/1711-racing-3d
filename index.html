@@ -40,6 +40,25 @@ body.racing #controls{display:flex}
 body:not(.racing) #controls{display:none}
 body.paused #controls{display:none}
 #rotateNotice{display:none;position:fixed;inset:0;z-index:50;background:#080b10;color:#fff;align-items:center;justify-content:center;text-align:center;padding:25px;font-weight:900;letter-spacing:2px}
+#minimap{position:fixed;top:78px;left:12px;width:176px;padding:7px 9px;background:#0a0d12df;z-index:2}
+#minimap svg{display:block;width:100%;height:auto;margin-top:3px}
+.mapLabel{font-size:9px;letter-spacing:1.4px;font-weight:900;color:#ff7256}
+.mapLegend{display:flex;justify-content:space-between;font-size:8px;color:#b8c6d3}
+.stats .stat:last-child{position:fixed;left:50%;bottom:103px;transform:translateX(-50%);min-width:108px;padding:8px 16px;border-color:#ff5b3577;background:#090d13e8}
+.stats .stat:last-child strong{font-size:34px;line-height:1;color:#ffcb65}
+.stats .stat:last-child span{font-size:9px;letter-spacing:1.5px}
+@media(max-width:520px){
+ #minimap{top:66px;left:7px;width:132px;padding:5px 7px}
+ .mapLabel{font-size:8px}
+ .mapLegend{font-size:7px}
+ .stats .stat:last-child{bottom:96px;min-width:82px;padding:6px 10px}
+ .stats .stat:last-child strong{font-size:26px}
+ #message{top:50%;left:50%;transform:translate(-50%,-50%);width:min(92%,560px);max-height:88vh;overflow-y:auto;padding:15px}
+ #message .track-grid{gap:5px}
+ #message .track-card{min-height:58px;padding:7px}
+ #message .track-card strong{font-size:10px}
+ #message .track-card small{font-size:9px}
+}
 @media(orientation:portrait){#rotateNotice{display:flex}}
 #trackSelect{width:100%;margin:7px 0 3px;padding:12px;border-radius:10px;border:1px solid #ffffff40;background:#202d39;color:#fff;font-weight:700}
 #countdown{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:10;background:#08111b55;font-size:clamp(64px,18vw,132px);font-weight:1000;letter-spacing:3px;color:#fff;text-shadow:0 5px 0 #b72f1d,0 0 32px #ff5b35;pointer-events:none}
@@ -81,7 +100,7 @@ body.paused #controls{display:none}
  .ctrl.nitro{font-size:10px}
  #nitroWrap{top:66px;right:7px;width:95px}
  .ctrl.nitro{font-size:10px}
- #message{top:22%;padding:15px}
+ #message{top:50%;left:50%;transform:translate(-50%,-50%);width:min(92%,560px);max-height:88vh;overflow-y:auto;padding:15px}
 }
 </style>
 </head>
@@ -108,6 +127,15 @@ body.paused #controls{display:none}
     <button data-menu="settings" class="secondary">SETTINGS</button>
   </div>
 
+  <div id="minimap" class="panel" aria-label="Circuit minimap">
+    <div class="mapLabel">CIRCUIT MAP</div>
+    <svg viewBox="0 0 140 70" role="img" aria-label="Route from start to finish">
+      <path id="mapPath" d="M2 35 L138 35" fill="none" stroke="#697481" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="138" cy="35" r="3.5" fill="#ffffff" stroke="#ff5b35" stroke-width="1.5"/>
+      <circle id="mapDot" cx="2" cy="35" r="4" fill="#ff5b35" stroke="#ffffff" stroke-width="1.5"/>
+    </svg>
+    <div class="mapLegend"><span>START</span><span>FINISH</span></div>
+  </div>
   <div id="raceTools"><button id="cameraToggle">CAM: CHASE</button><button id="pauseToggle">Ⅱ PAUSE</button></div>
   <div id="rotateNotice">ROTATE YOUR DEVICE TO LANDSCAPE</div>
   <div id="countdown">3</div>
@@ -884,10 +912,27 @@ function trackDistanceAtX(x,track){
  const a=table[lo],b=table[hi],t=(x-a.x)/(b.x-a.x||1);
  return a.d+(b.d-a.d)*t;
 }
+function drawMinimap(track){
+ const pts=[];
+ for(let i=0;i<=100;i++){
+  const x=START_LINE_X+track.distance*i/100;
+  const y=35-routeCenter(x,track)*.22;
+  pts.push((i*1.36+2).toFixed(2)+','+THREE.MathUtils.clamp(y,3,67).toFixed(2));
+ }
+ document.getElementById('mapPath').setAttribute('d','M'+pts.join(' L'));
+ updateMinimapDot(track);
+}
+function updateMinimapDot(track){
+ const ratio=THREE.MathUtils.clamp((player.position.x-START_LINE_X)/track.distance,0,1);
+ const x=2+ratio*136,y=THREE.MathUtils.clamp(35-routeCenter(player.position.x,track)*.22,3,67);
+ const dot=document.getElementById('mapDot');
+ dot.setAttribute('cx',x.toFixed(2));dot.setAttribute('cy',y.toFixed(2));
+}
 function updateHUD(){
  const track=trackOptions[selectedTrack];
  const traveled=trackDistanceAtX(player.position.x,track);
  const progress=THREE.MathUtils.clamp(traveled/(track.arcLength||track.distance),0,1);
+ updateMinimapDot(track);
  document.getElementById('lap').textContent=Math.floor(progress*100)+'%';
  document.getElementById('remaining').textContent=(track.distance*(1-progress)/1000).toFixed(2);
  document.getElementById('speed').textContent=Math.round(Math.abs(speed)*1.55);
@@ -1014,6 +1059,10 @@ function updateSound(dt=1/60){
  if(nitroGain.noiseGain){
   nitroGain.noiseFilter.frequency.setTargetAtTime(rocket?650+rocketPitch*4000:550,now,.12);
   nitroGain.noiseGain.gain.setTargetAtTime(rocket?.012+rocketPitch*.045:0,now,.12);
+ }
+ if(!soundEnabled){
+  [engineGain,engineGain2,engineGain3,nitroGain].forEach(g=>g&&g.gain.setTargetAtTime(0,now,.05));
+  if(nitroGain.noiseGain)nitroGain.noiseGain.gain.setTargetAtTime(0,now,.05);
  }
 }
 
@@ -1246,6 +1295,7 @@ function startGame(){
  const track=trackOptions[selectedTrack];
  finishLineX=START_LINE_X+track.distance;
  prepareTrackDistance(track);
+ drawMinimap(track);
  scene.background.setHex(track.sky);scene.fog.color.setHex(track.sky);
  buildTrackWorld(track);
  document.querySelector('.brand').innerHTML='1711 <span>RACING</span>';
