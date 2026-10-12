@@ -404,6 +404,7 @@ let nitro=100,nitroActive=false;
 let running=false,playerFinished=false,raceOver=false;
 let speed=0,heading=Math.PI/2;
 let playerProgress=0,lastAngle=0,elapsed=0;
+let collisionCooldown=0;
 const TOTAL_LAPS=3;
 const FINISH_PROGRESS=TOTAL_LAPS*TAU;
 const MAX_SPEED=42;
@@ -620,11 +621,33 @@ function updateAI(dt){
  }
 }
 
+function handleCarCollisions(dt){
+ // Tabrakan sederhana: mobil pemain terdorong dan kehilangan sebagian kecepatan.
+ collisionCooldown=Math.max(0,collisionCooldown-dt);
+ for(const a of ai){
+  const dx=player.position.x-a.car.position.x;
+  const dz=player.position.z-a.car.position.z;
+  const distance=Math.sqrt(dx*dx+dz*dz);
+  if(distance<2.65){
+   if(distance>0.001){
+    const push=(2.65-distance)*0.55;
+    player.position.x+=(dx/distance)*push;
+    player.position.z+=(dz/distance)*push;
+   }
+   if(collisionCooldown<=0){
+    speed*=0.62;
+    collisionCooldown=0.7;
+   }
+  }
+ }
+}
+
 function update(dt){
  if(!running)return;
  elapsed+=dt;
  updatePlayer(dt);
  if(!raceOver)updateAI(dt);
+ if(!raceOver)handleCarCollisions(dt);
  updateHUD();
 }
 
