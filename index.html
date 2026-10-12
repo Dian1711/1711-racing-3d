@@ -75,7 +75,7 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
     <h1>1711 RACING 3D</h1>
     <p>Kalahkan 3 pembalap AI! Selesaikan 3 putaran dan jadilah yang pertama mencapai garis finis.</p>
     <button id="start">MULAI BALAPAN</button>
-    <p>W / ↑ Gas · S Mundur · ↓ Rem · A/D Belok · Shift / X Nitro · Space Drift</p>
+    <p>W / ↑ Gas · S Mundur · ↓ Rem · A/D Belok · Shift / X Nitro</p>
   </div>
 
   <div id="nitroWrap"><div id="nitroLabel">⚡ NITRO <span id="nitroPct">100%</span></div><div id="nitroTrack"><div id="nitroFill"></div></div></div>
@@ -87,7 +87,6 @@ button{border:0;border-radius:10px;background:#ff5b35;color:white;font-weight:80
     <div class="controlgroup">
       <button class="ctrl reverse" data-control="reverse">MUNDUR</button>
       <button class="ctrl brake" data-control="brake">REM</button>
-      <button class="ctrl brake" data-control="drift">DRIFT</button>
       <button class="ctrl nitro" data-control="nitro">NITRO</button>
       <button class="ctrl gas" data-control="gas">▲</button>
     </div>
@@ -400,7 +399,7 @@ const ai=[
  {car:createCar(0xeeeeee),progress:.37,speed:.32,lane:3,targetLane:3,finished:false,name:'Putih'}
 ];
 
-const keys={left:false,right:false,gas:false,brake:false,reverse:false,nitro:false,drift:false};
+const keys={left:false,right:false,gas:false,brake:false,reverse:false,nitro:false};
 let nitro=100,nitroActive=false;
 let running=false,playerFinished=false,raceOver=false;
 let speed=0,heading=Math.PI/2;
@@ -510,7 +509,6 @@ addEventListener('keydown',e=>{
  if(k==='arrowleft'||k==='a')keys.left=true;
  if(k==='arrowright'||k==='d')keys.right=true;
  if(k==='shift'||k==='x')keys.nitro=true;
- if(k===' ')keys.drift=true;
 });
 
 addEventListener('keyup',e=>{
@@ -522,7 +520,6 @@ addEventListener('keyup',e=>{
  if(k==='arrowleft'||k==='a')keys.left=false;
  if(k==='arrowright'||k==='d')keys.right=false;
  if(k==='shift'||k==='x')keys.nitro=false;
- if(k===' ')keys.drift=false;
 });
 
 addEventListener('blur',()=>{
@@ -554,16 +551,14 @@ function updatePlayer(dt){
  const steering=(keys.right?1:0)-(keys.left?1:0);
  if(Math.abs(speed)>.3){
   const reverseFactor=speed>=0?1:-1;
-  const turnRate=keys.drift?2.5:1.8;
+  const turnRate=1.8;
   heading-=steering*turnRate*dt*(.25+Math.abs(speed)/MAX_SPEED)*reverseFactor;
  }
 
- player.rotation.y=heading+Math.PI+(keys.drift&&Math.abs(speed)>8?steering*.12:0);
+ player.rotation.y=heading+Math.PI;
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
  player.userData.wheels.forEach(w=>w.rotation.x+=speed*dt*.6);
 
- // Sedikit kehilangan traksi saat drift.
- if(keys.drift&&Math.abs(speed)>10){speed*=Math.exp(-.12*dt);}
 
  // Perlambat saat keluar lintasan.
  const dist=trackDistance(player.position);
