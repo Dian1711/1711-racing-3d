@@ -708,9 +708,15 @@ function updatePlayer(dt){
  }
 
  nitroActive=keys.nitro&&keys.gas&&nitro>0&&speed>2;
- if(nitroActive){nitro=Math.max(0,nitro-24*dt);speed+=11*dt;}
- else nitro=Math.min(100,nitro+8*dt);
- speed=THREE.MathUtils.clamp(speed,-MAX_REVERSE,nitroActive?NITRO_SPEED:MAX_SPEED);
+ if(nitroActive){
+  nitro=Math.max(0,nitro-24*dt);
+  speed+=11*dt;
+ }else{
+  nitro=Math.min(100,nitro+8*dt);
+ }
+ // Batas nitro tidak langsung memotong kecepatan saat tombol dilepas.
+ // Mobil melambat secara alami kembali ke batas normal.
+ speed=THREE.MathUtils.clamp(speed,-MAX_REVERSE,NITRO_SPEED);
  player.userData.nitroFlames.forEach(f=>{f.visible=nitroActive; if(nitroActive)f.scale.setScalar(.75+Math.random()*.7);});
 
  const steering=(keys.right?1:0)-(keys.left?1:0);
@@ -718,12 +724,12 @@ function updatePlayer(dt){
  // Setir progresif: lebih responsif saat melaju, tetapi tidak langsung membelok tajam.
  if(Math.abs(speed)>.3){
   const reverseFactor=speed>=0?1:-1;
-  const turnRate=2.65;
-  const steeringResponse=0.22+speedFraction*0.78;
+  const turnRate=1.75;
+  const steeringResponse=0.35+speedFraction*0.65;
   heading-=steering*turnRate*dt*steeringResponse*reverseFactor;
  }
  // Sedikit body roll visual saat membelok, dengan kemiringan yang halus.
- const targetRoll=-steering*speedFraction*0.075;
+ const targetRoll=-steering*speedFraction*0.045;
  player.rotation.z+=(targetRoll-player.rotation.z)*(1-Math.exp(-dt*4.5));
  player.rotation.y=heading+Math.PI;
  player.position.addScaledVector(forwardFromHeading(heading),speed*dt);
@@ -733,7 +739,9 @@ function updatePlayer(dt){
  // Perlambat saat keluar lintasan.
  const dist=Math.abs(player.position.z);
  if(dist>ROAD/2-1){
-  speed*=Math.max(.94,1-(dist-ROAD/2+1)*.025);
+  // Penalti keluar jalur dibuat bertahap agar mobil tidak mendadak berhenti.
+  const offRoad=Math.min(1,Math.max(0,dist-(ROAD/2-1)));
+  speed*=Math.exp(-offRoad*.7*dt);
  }
 
  // Mode tes lurus: tidak menghitung putaran atau garis finis.
