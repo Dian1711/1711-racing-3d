@@ -107,6 +107,8 @@ renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.65));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 document.body.insertBefore(renderer.domElement,document.getElementById('hud'));
 
@@ -317,101 +319,112 @@ for(let i=0;i<6;i++){
 
 function createCar(color){
  const g=new THREE.Group();
- const paint=new THREE.MeshPhysicalMaterial({color,roughness:.26,metalness:.28,clearcoat:.85,clearcoatRoughness:.2});
- const darkPaint=new THREE.MeshStandardMaterial({color:0x171c22,roughness:.38,metalness:.25});
- const rubber=new THREE.MeshStandardMaterial({color:0x101216,roughness:.92});
- const rim=new THREE.MeshStandardMaterial({color:0xc3cbd1,roughness:.24,metalness:.8});
- const glass=new THREE.MeshPhysicalMaterial({color:0x284656,roughness:.12,metalness:.25,transparent:true,opacity:.88,clearcoat:1});
- const headlamp=new THREE.MeshStandardMaterial({color:0xfff5d6,emissive:0xffd98a,emissiveIntensity:1.2,roughness:.2});
- const taillamp=new THREE.MeshStandardMaterial({color:0xff1d12,emissive:0xb90000,emissiveIntensity:1,roughness:.25});
- const rubberTrim=darkPaint;
-
- function smoothPart(geo,material,pos,scale){
-  const mesh=new THREE.Mesh(geo,material);
-  mesh.position.set(...pos);
-  if(scale)mesh.scale.set(...scale);
-  mesh.castShadow=true;mesh.receiveShadow=true;
-  g.add(mesh);return mesh;
+ const paint=new THREE.MeshPhysicalMaterial({color,roughness:.24,metalness:.32,clearcoat:1,clearcoatRoughness:.18});
+ const darkPaint=new THREE.MeshStandardMaterial({color:0x171b20,roughness:.42,metalness:.25});
+ const rubber=new THREE.MeshStandardMaterial({color:0x111214,roughness:.88});
+ const rim=new THREE.MeshStandardMaterial({color:0xb9c2c8,roughness:.25,metalness:.82});
+ const glass=new THREE.MeshPhysicalMaterial({color:0x203c4b,roughness:.12,metalness:.2,transparent:true,opacity:.9,clearcoat:1});
+ const headlamp=new THREE.MeshStandardMaterial({color:0xfff5dc,emissive:0xffdca0,emissiveIntensity:1.1});
+ const taillamp=new THREE.MeshStandardMaterial({color:0xf20d18,emissive:0xb90000,emissiveIntensity:.8});
+ const add=(geo,material,pos,scale,rot)=>{
+  const m=new THREE.Mesh(geo,material);m.position.set(...pos);
+  if(scale)m.scale.set(...scale);if(rot)m.rotation.set(...rot);
+  m.castShadow=true;m.receiveShadow=true;g.add(m);return m;
+ };
+ // Mesh bodi dibuat dari penampang melintang yang berubah sepanjang mobil.
+ // Hasilnya memiliki hidung rendah, bahu roda, dan buritan yang lebih mirip mobil sport.
+ const sections=[
+  [-1.88,.48,.66,.54],[-1.65,.57,.88,.68],[-1.22,.70,.94,.72],
+  [-.65,.74,.91,.70],[.20,.72,.91,.69],[.88,.67,.89,.66],
+  [1.42,.61,.82,.61],[1.78,.53,.72,.53]
+ ];
+ const verts=[],indices=[],rings=12;
+ for(const [z,y,w,h] of sections){
+  for(let j=0;j<rings;j++){
+   const ang=(j/rings)*Math.PI*2;
+   const cs=Math.cos(ang),sn=Math.sin(ang);
+   // sisi tegak agak membulat, bagian atas dan bawah mengecil.
+   const x=w*Math.sign(cs)*Math.pow(Math.abs(cs),.72);
+   const yy=y+sn*h*.48;
+   verts.push(x,yy,z);
+  }
  }
- const sphere=()=>new THREE.SphereGeometry(1,24,16);
-
- // Bodi utama memakai permukaan halus, bukan kumpulan balok kotak.
- smoothPart(sphere(),darkPaint,[0,.57,0],[.98,.28,1.82]);
- smoothPart(sphere(),paint,[0,.72,-.02],[1.02,.32,1.78]);
- // Kap mesin rendah dan membulat.
- smoothPart(sphere(),paint,[0,.83,-1.02],[.88,.19,.78]);
- smoothPart(sphere(),paint,[0,.79,1.15],[.88,.18,.57]);
- // Kabin menyatu dengan bodi, dengan atap melengkung.
- smoothPart(sphere(),darkPaint,[0,1.02,.02],[.70,.34,.82]);
- smoothPart(sphere(),glass,[0,1.10,-.13],[.655,.265,.67]);
- smoothPart(sphere(),paint,[0,1.31,.09],[.55,.105,.43]);
- // Kaca depan dan belakang mengkilap.
- const frontGlass=smoothPart(new THREE.SphereGeometry(1,20,12),glass,[0,1.04,-.57],[.59,.22,.19]);
- frontGlass.rotation.x=-.28;
- const backGlass=smoothPart(new THREE.SphereGeometry(1,20,12),glass,[0,1.04,.58],[.59,.21,.18]);
- backGlass.rotation.x=.28;
-
- // Fender bulat di atas setiap roda dan side skirt rendah.
+ for(let i=0;i<sections.length-1;i++)for(let j=0;j<rings;j++){
+  const p=i*rings+j,q=i*rings+(j+1)%rings;
+  indices.push(p,q,p+rings,q,q+rings,p+rings);
+ }
+ const bodyGeo=new THREE.BufferGeometry();
+ bodyGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+ bodyGeo.setIndex(indices);bodyGeo.computeVertexNormals();
+ add(bodyGeo,paint,[0,0,0]);
+ // Sasis dan bumper tipis.
+ add(new THREE.BoxGeometry(1.68,.19,3.25),darkPaint,[0,.48,0]);
+ add(new THREE.BoxGeometry(1.84,.11,.20),darkPaint,[0,.43,-1.82]);
+ add(new THREE.BoxGeometry(1.72,.12,.18),darkPaint,[0,.43,1.76]);
+ // Kabin model coupe dengan bentuk trapesium dan kaca yang menyatu.
+ const cabinGeo=new THREE.BufferGeometry();
+ const cv=[
+  -.69,.78,-.73, .69,.78,-.73, -.53,1.31,-.23, .53,1.31,-.23,
+  -.53,1.31,-.23, .53,1.31,-.23, -.48,1.29,.53, .48,1.29,.53,
+  -.69,.78,-.73, -.53,1.31,-.23, -.48,1.29,.53, -.68,.77,.62,
+  .69,.78,-.73, .53,1.31,-.23, .48,1.29,.53, .68,.77,.62
+ ];
+ cabinGeo.setAttribute('position',new THREE.Float32BufferAttribute(cv,3));
+ cabinGeo.setIndex([
+  0,1,2,1,3,2, 4,5,6,5,7,6,
+  8,9,10,8,10,11, 12,14,13,12,15,14
+ ]);cabinGeo.computeVertexNormals();
+ add(cabinGeo,darkPaint,[0,0,0]);
+ // Atap dan kaca depan/belakang, dibuat sebagai bidang miring.
+ add(new THREE.BoxGeometry(.88,.055,.64),paint,[0,1.30,.10],[1,1,1],[0,0,0]);
+ const windshieldGeo=new THREE.BufferGeometry();
+ windshieldGeo.setAttribute('position',new THREE.Float32BufferAttribute([
+  -.58,.83,-.69, .58,.83,-.69, -.45,1.24,-.27,
+  .58,.83,-.69, .45,1.24,-.27, -.45,1.24,-.27
+ ],3));windshieldGeo.computeVertexNormals();
+ add(windshieldGeo,glass,[0,0,0]);
+ const rearGeo=new THREE.BufferGeometry();
+ rearGeo.setAttribute('position',new THREE.Float32BufferAttribute([
+  -.45,1.24,.45, .45,1.24,.45, -.60,.80,.66,
+  .45,1.24,.45, .60,.80,.66, -.60,.80,.66
+ ],3));rearGeo.computeVertexNormals();add(rearGeo,glass,[0,0,0]);
+ // Fender halus mengikuti ban, side skirts, spion dan grille.
  for(const x of [-.91,.91]){
-  for(const z of [-1.17,1.17]){
-   smoothPart(sphere(),paint,[x,.54,z],[.19,.25,.48]);
-  }
-  smoothPart(sphere(),darkPaint,[x,.42,0],[.105,.10,1.23]);
-  smoothPart(sphere(),paint,[x*1.02,1.02,-.48],[.13,.09,.17]);
+  add(new THREE.SphereGeometry(1,24,16),paint,[x,.58,-1.15],[.15,.20,.48]);
+  add(new THREE.SphereGeometry(1,24,16),paint,[x,.58,1.15],[.15,.20,.48]);
+  add(new THREE.BoxGeometry(.09,.13,2.35),darkPaint,[x,.42,0]);
+  add(new THREE.SphereGeometry(1,16,10),paint,[x*1.02,.94,-.48],[.12,.08,.16]);
  }
- // Bumper depan/belakang dibulatkan dan grille tipis.
- smoothPart(sphere(),darkPaint,[0,.48,-1.69],[.91,.12,.17]);
- smoothPart(sphere(),darkPaint,[0,.48,1.68],[.91,.12,.16]);
- smoothPart(new THREE.SphereGeometry(1,18,10),darkPaint,[0,.57,-1.72],[.34,.075,.045]);
-
- // Lampu LED oval dan lampu rem.
+ add(new THREE.BoxGeometry(.60,.12,.045),darkPaint,[0,.56,-1.89]);
  for(const x of [-.64,.64]){
-  smoothPart(sphere(),headlamp,[x,.78,-1.55],[.22,.075,.09]);
-  smoothPart(sphere(),taillamp,[x,.73,1.57],[.22,.065,.075]);
+  add(new THREE.BoxGeometry(.32,.075,.045),headlamp,[x,.72,-1.79]);
+  add(new THREE.BoxGeometry(.32,.075,.045),taillamp,[x,.67,1.78]);
  }
- // Spoiler sporty dengan tiang ramping.
- for(const x of [-.53,.53]){
-  smoothPart(sphere(),darkPaint,[x,1.05,1.49],[.045,.17,.045]);
- }
- smoothPart(sphere(),paint,[0,1.20,1.53],[.77,.055,.12]);
-
- // Roda berprofil bulat, velg metalik dan beberapa jari-jari.
+ // Spoiler kecil, tidak terlalu besar agar proporsi tetap seperti coupe.
+ for(const x of [-.48,.48])add(new THREE.BoxGeometry(.045,.19,.05),darkPaint,[x,.91,1.54]);
+ add(new THREE.BoxGeometry(1.48,.075,.20),paint,[0,1.02,1.57]);
+ // Roda dan velg multi-jari.
  const wheels=[];
- for(const x of [-.96,.96]){
-  for(const z of [-1.16,1.16]){
-   const w=new THREE.Group();
-   const tire=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.24,24,1),rubber);
-   tire.rotation.z=Math.PI/2;w.add(tire);
-   const rimMesh=new THREE.Mesh(new THREE.CylinderGeometry(.225,.225,.255,20),rim);
-   rimMesh.rotation.z=Math.PI/2;w.add(rimMesh);
-   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.27,16),darkPaint);
-   hub.rotation.z=Math.PI/2;w.add(hub);
-   for(let k=0;k<8;k++){
-    const spoke=new THREE.Mesh(new THREE.BoxGeometry(.025,.19,.035),rim);
-    spoke.position.set(x>0?.135:-.135,Math.sin(k*Math.PI/4)*.105,Math.cos(k*Math.PI/4)*.105);
-    spoke.rotation.x=k*Math.PI/4;w.add(spoke);
-   }
-   w.position.set(x,.39,z);g.add(w);wheels.push(w);
+ for(const x of [-.94,.94])for(const z of [-1.16,1.16]){
+  const w=new THREE.Group();
+  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.33,.33,.23,32),rubber);tire.rotation.z=Math.PI/2;w.add(tire);
+  const rimMesh=new THREE.Mesh(new THREE.CylinderGeometry(.225,.225,.245,24),rim);rimMesh.rotation.z=Math.PI/2;w.add(rimMesh);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.26,16),darkPaint);hub.rotation.z=Math.PI/2;w.add(hub);
+  for(let k=0;k<10;k++){
+   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.022,.19,.028),rim);
+   spoke.position.set(x>0?.128:-.128,Math.sin(k*Math.PI/5)*.105,Math.cos(k*Math.PI/5)*.105);
+   spoke.rotation.x=k*Math.PI/5;w.add(spoke);
   }
+  w.position.set(x,.37,z);g.add(w);wheels.push(w);
  }
- // Knalpot dan api nitro biru.
  const nitroFlames=[];
- for(const x of [-.48,.48]){
-  const exhaust=new THREE.Mesh(new THREE.CylinderGeometry(.075,.09,.15,12),darkPaint);
-  exhaust.rotation.x=Math.PI/2;exhaust.position.set(x,.48,1.77);g.add(exhaust);
-  const flame=new THREE.Mesh(new THREE.ConeGeometry(.12,.62,12),nitroGlowMat);
-  flame.rotation.x=Math.PI/2;flame.position.set(x,.48,2.05);flame.visible=false;g.add(flame);nitroFlames.push(flame);
+ for(const x of [-.43,.43]){
+  add(new THREE.CylinderGeometry(.065,.08,.13,12),darkPaint,[x,.48,1.83],[1,1,1],[Math.PI/2,0,0]);
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.10,.58,12),nitroGlowMat);
+  flame.rotation.x=Math.PI/2;flame.position.set(x,.48,2.10);flame.visible=false;g.add(flame);nitroFlames.push(flame);
  }
- // Garis kap tipis mengikuti permukaan melengkung.
- const stripeMat=new THREE.MeshBasicMaterial({color:0xf5f5f5});
- for(const x of [-.27,.27]){
-  const stripe=new THREE.Mesh(new THREE.BoxGeometry(.045,.012,.72),stripeMat);
-  stripe.position.set(x,.985,-1.02);g.add(stripe);
- }
- g.userData.wheels=wheels;
- g.userData.nitroFlames=nitroFlames;
- scene.add(g);
- return g;
+ g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;
+ scene.add(g);return g;
 }
 function placeCar(car,t,lane=0){
  t=wrap(t);
@@ -462,21 +475,41 @@ for(let x=-1080;x<1100;x+=18){
  dash.rotation.x=-Math.PI/2;dash.position.set(x,-.012,0);scene.add(dash);
 }
 
-// Vegetasi bervariasi: batang, kanopi bulat berlapis, dan semak di pinggir jalan.
-const barkMat=mat(0x57402e), foliageA=mat(0x285b35), foliageB=mat(0x397447), foliageC=mat(0x4b8250);
-for(let x=-1030;x<=1030;x+=42){
+// Pepohonan dengan batang bercabang dan tajuk organik berlapis.
+const barkMat=mat(0x51402f),barkLight=mat(0x69513a);
+const foliageA=new THREE.MeshStandardMaterial({color:0x294c2d,roughness:1});
+const foliageB=new THREE.MeshStandardMaterial({color:0x365f35,roughness:1});
+const foliageC=new THREE.MeshStandardMaterial({color:0x426b3b,roughness:1});
+const foliageD=new THREE.MeshStandardMaterial({color:0x507541,roughness:1});
+function makeTree(x,z,s,seed){
+ const treeGroup=new THREE.Group();treeGroup.position.set(x,0,z);treeGroup.scale.setScalar(s);
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.17,.31,3.5,12,3),barkMat);
+ trunk.position.y=1.75;trunk.castShadow=true;treeGroup.add(trunk);
+ // Cabang kayu yang membelah ke arah tajuk.
+ for(let j=0;j<3;j++){
+  const branch=new THREE.Mesh(new THREE.CylinderGeometry(.055,.12,1.45,8),barkLight);
+  branch.position.set((j-1)*.28,2.65,.02);
+  branch.rotation.z=(j-1)*-.42;branch.rotation.x=(j-1)*.16;
+  branch.castShadow=true;treeGroup.add(branch);
+ }
+ // Kelompok tajuk dengan geometri halus; variasi skala membuat siluet alami.
+ const mats=[foliageA,foliageB,foliageC,foliageD];
+ const crownCount=7;
+ for(let i=0;i<crownCount;i++){
+  const angle=i*2.399+seed;
+  const radius=i===0?0:.65+((i*17)%5)*.09;
+  const size=.82+((i*13+seed*7)%5)*.075;
+  const crown=new THREE.Mesh(new THREE.SphereGeometry(size,18,14),mats[(i+seed)%mats.length]);
+  crown.position.set(Math.cos(angle)*radius,3.25+(i%3)*.42,Math.sin(angle)*radius*.72);
+  crown.scale.set(1.05,1.12,.92);crown.castShadow=true;crown.receiveShadow=true;treeGroup.add(crown);
+ }
+ scene.add(treeGroup);
+}
+for(let x=-1030;x<=1030;x+=36){
  for(const side of [-1,1]){
-  const z=side*(29+Math.random()*12);
-  const scale=.75+Math.random()*.8;
-  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12*scale,.24*scale,2.6*scale,9),barkMat);
-  trunk.position.set(x+(Math.random()-.5)*9,1.3*scale,z);scene.add(trunk);
-  const crownMat=[foliageA,foliageB,foliageC][Math.floor(Math.random()*3)];
-  const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.55*scale,2),crownMat);
-  crown.position.set(trunk.position.x,3.0*scale,z);crown.scale.set(1,1.15,.9);scene.add(crown);
-  const crown2=new THREE.Mesh(new THREE.IcosahedronGeometry(1.05*scale,1),crownMat);
-  crown2.position.set(trunk.position.x+.65*scale,2.8*scale,z+.25*scale);scene.add(crown2);
-  const bush=new THREE.Mesh(new THREE.IcosahedronGeometry(.9,1),foliageB);
-  bush.position.set(x+12, .65, z-side*3);bush.scale.set(1.5,.75,1);scene.add(bush);
+  const z=side*(31+Math.random()*20);
+  const s=.85+Math.random()*.75;
+  makeTree(x+(Math.random()-.5)*12,z,s,Math.floor(Math.random()*4));
  }
 }
 document.querySelector('.brand').innerHTML='1711 <span>STRAIGHT TEST</span>';
