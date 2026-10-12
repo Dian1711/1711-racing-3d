@@ -320,39 +320,49 @@ for(let i=0;i<6;i++){
 
 function createCar(color){
  const g=new THREE.Group();
- const paint=new THREE.MeshStandardMaterial({color,roughness:.32,metalness:.16});
+ const paint=new THREE.MeshStandardMaterial({color,roughness:.3,metalness:.18});
  const dark=mat(0x171b20,.45),rubber=mat(0x101113,.92);
  const rim=new THREE.MeshStandardMaterial({color:0xc4cbd1,metalness:.78,roughness:.28});
- const glass=new THREE.MeshStandardMaterial({color:0x244353,metalness:.18,roughness:.2});
+ const glass=new THREE.MeshStandardMaterial({color:0x193847,metalness:.15,roughness:.22});
  const white=mat(0xf5f0e5,.35);
  const add=(geo,material,pos,scale,rot)=>{
   const m=new THREE.Mesh(geo,material);m.position.set(...pos);
   if(scale)m.scale.set(...scale);if(rot)m.rotation.set(...rot);
   m.castShadow=true;m.receiveShadow=true;g.add(m);return m;
  };
- // Bentuk stock car kotak seperti model awal; detail balap ditambahkan sebagai stiker.
- add(new THREE.BoxGeometry(1.78,.43,3.45),paint,[0,.61,-.02]);
- add(new THREE.BoxGeometry(1.68,.22,1.05),paint,[0,.76,-1.05]);
- add(new THREE.BoxGeometry(1.70,.20,.72),paint,[0,.73,1.22]);
- add(new THREE.BoxGeometry(1.84,.18,.20),dark,[0,.42,-1.78]);
- add(new THREE.BoxGeometry(1.88,.20,.22),dark,[0,.42,1.76]);
- add(new THREE.BoxGeometry(1.24,.48,1.48),paint,[0,.98,.10]);
- add(new THREE.BoxGeometry(1.16,.035,.06),glass,[0,1.20,-.64],null,[.22,0,0]);
- add(new THREE.BoxGeometry(1.16,.035,.06),glass,[0,1.20,.83],null,[-.22,0,0]);
- for(const x of [-.64,.64]) add(new THREE.BoxGeometry(.035,.28,.58),glass,[x,1.02,.10]);
- for(const x of [-.88,.88]){
-  add(new THREE.BoxGeometry(.10,.12,2.75),dark,[x,.43,0]);
-  for(const z of [-1.12,1.10])add(new THREE.BoxGeometry(.10,.18,.78),dark,[x,.58,z]);
+ // Stock-car silhouette: wide haunches, low sloping nose, rounded wheel arches and a compact cabin.
+ add(new THREE.BoxGeometry(1.92,.36,3.5),paint,[0,.59,0]);
+ add(new THREE.BoxGeometry(1.86,.27,1.05),paint,[0,.49,-1.28],null,[.09,0,0]);
+ add(new THREE.BoxGeometry(1.78,.23,.78),paint,[0,.48,1.30],null,[-.04,0,0]);
+ // Rounded fenders make the wheel area look like a purpose-built race car rather than a cube.
+ for(const x of [-.76,.76])for(const z of [-1.12,1.10]){
+  add(new THREE.CylinderGeometry(.43,.43,.16,24),paint,[x,.60,z],[1,1,1],[0,0,Math.PI/2]);
+  add(new THREE.BoxGeometry(.26,.22,.86),paint,[x,.64,z]);
  }
- // Tiga garis livery pada kap, atap, dan bagasi.
+ // Low cabin with sloped front and rear glass.
+ const cabinShape=new THREE.Shape();
+ cabinShape.moveTo(-.62,0);cabinShape.lineTo(.62,0);cabinShape.lineTo(.48,.42);cabinShape.lineTo(.30,.52);cabinShape.lineTo(-.30,.52);cabinShape.lineTo(-.48,.42);cabinShape.closePath();
+ const cabinGeo=new THREE.ExtrudeGeometry(cabinShape,{depth:1.20,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.035,bevelThickness:.025});
+ cabinGeo.translate(0,0,-.60);
+ // Shape is built in XY; rotate into car's width/height/length orientation.
+ cabinGeo.rotateY(Math.PI/2);
+ // use a custom trapezoid cabin from planes to keep the car low and clearly NASCAR-like
+ add(new THREE.BoxGeometry(1.15,.42,1.12),paint,[0,.91,.05]);
+ add(new THREE.BoxGeometry(1.05,.035,.07),glass,[0,1.105,-.53],null,[.42,0,0]);
+ add(new THREE.BoxGeometry(1.05,.035,.07),glass,[0,1.105,.61],null,[-.42,0,0]);
+ for(const x of [-.59,.59]){
+  add(new THREE.BoxGeometry(.045,.30,.60),glass,[x,.99,.05]);
+  add(new THREE.BoxGeometry(.07,.06,.62),dark,[x,.87,.05]);
+ }
+ // Hood stripes, roof graphics and side skirt accents.
  for(let i=0;i<3;i++){
-  const sm=new THREE.MeshStandardMaterial({color:[0xffffff,0xffd43b,0x171b20][i],roughness:.3});
+  const stripe=new THREE.MeshStandardMaterial({color:[0xffffff,0xffd43b,0x171b20][i],roughness:.3});
   const xx=(i-1)*.22,ww=i===1?.12:.075;
-  add(new THREE.BoxGeometry(ww,.018,.94),sm,[xx,.873,-1.04]);
-  add(new THREE.BoxGeometry(ww,.018,.66),sm,[xx,1.232,.10]);
-  add(new THREE.BoxGeometry(ww,.018,.62),sm,[xx,.835,1.20]);
+  add(new THREE.BoxGeometry(ww,.014,.93),stripe,[xx,.632,-1.22]);
+  add(new THREE.BoxGeometry(ww,.014,.78),stripe,[xx,1.125,.05]);
+  add(new THREE.BoxGeometry(ww,.014,.54),stripe,[xx,.615,1.30]);
  }
- // Nomor balap pada pintu dibuat sebagai tekstur agar terlihat seperti decal.
+ // Door number and sponsor decals.
  const nc=document.createElement('canvas');nc.width=256;nc.height=128;
  const ctx=nc.getContext('2d');ctx.fillStyle='#f7f3e8';ctx.fillRect(0,0,256,128);
  ctx.fillStyle='#d92d25';ctx.font='900 90px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -360,33 +370,41 @@ function createCar(color){
  ctx.fillStyle='#171b20';ctx.fillRect(0,0,256,8);ctx.fillRect(0,120,256,8);
  const nt=new THREE.CanvasTexture(nc);nt.colorSpace=THREE.SRGBColorSpace;
  const nm=new THREE.MeshBasicMaterial({map:nt,side:THREE.DoubleSide});
- for(const x of [-.902,.902]){
-  add(new THREE.PlaneGeometry(.48,.26),nm,[x,.69,.13],null,[0,x>0?Math.PI/2:-Math.PI/2,0]);
-  add(new THREE.BoxGeometry(.025,.075,.35),white,[x,.69,-.42]);
+ for(const x of [-.966,.966]){
+  add(new THREE.PlaneGeometry(.48,.27),nm,[x,.62,.12],null,[0,x>0?Math.PI/2:-Math.PI/2,0]);
+  add(new THREE.BoxGeometry(.025,.08,.36),white,[x,.61,-.42]);
+  add(new THREE.BoxGeometry(.035,.07,.34),dark,[x,.61,.56]);
+  add(new THREE.BoxGeometry(.08,.10,2.35),dark,[x,.42,0]);
  }
- add(new THREE.BoxGeometry(.65,.025,.25),white,[0,.89,-1.38]);
- add(new THREE.BoxGeometry(.45,.028,.09),dark,[0,.907,-1.38]);
- add(new THREE.BoxGeometry(.72,.025,.16),white,[0,.85,1.42]);
- add(new THREE.BoxGeometry(1.38,.12,.22),dark,[0,1.31,1.55]);
- add(new THREE.BoxGeometry(1.30,.04,.18),white,[0,1.39,1.55]);
- for(const x of [-.61,.61]){
-  add(new THREE.BoxGeometry(.34,.08,.035),new THREE.MeshStandardMaterial({color:0xfff0bd,emissive:0x8c6a30}),[x,.70,-1.77]);
-  add(new THREE.BoxGeometry(.32,.075,.035),new THREE.MeshStandardMaterial({color:0xff2929,emissive:0x9c0000}),[x,.67,1.76]);
+ // Front splitter, rear diffuser and a raised racing spoiler.
+ add(new THREE.BoxGeometry(2.04,.09,.28),dark,[0,.38,-1.78]);
+ add(new THREE.BoxGeometry(1.88,.13,.28),dark,[0,.39,1.78]);
+ add(new THREE.BoxGeometry(.12,.30,.12),dark,[-.53,1.02,1.48]);
+ add(new THREE.BoxGeometry(.12,.30,.12),dark,[.53,1.02,1.48]);
+ add(new THREE.BoxGeometry(1.55,.10,.30),dark,[0,1.18,1.55]);
+ add(new THREE.BoxGeometry(1.42,.035,.24),white,[0,1.245,1.55]);
+ // Headlamps and rear lamps.
+ for(const x of [-.65,.65]){
+  add(new THREE.BoxGeometry(.38,.10,.035),new THREE.MeshStandardMaterial({color:0xfff0bd,emissive:0x8c6a30}),[x,.57,-1.77]);
+  add(new THREE.BoxGeometry(.34,.09,.035),new THREE.MeshStandardMaterial({color:0xff2929,emissive:0x9c0000}),[x,.56,1.77]);
  }
- add(new THREE.BoxGeometry(.62,.12,.035),dark,[0,.55,-1.79]);
  const wheels=[];
- for(const x of [-.94,.94])for(const z of [-1.12,1.10]){
+ for(const x of [-.98,.98])for(const z of [-1.12,1.10]){
   const w=new THREE.Group();
-  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.24,28),rubber);tire.rotation.z=Math.PI/2;w.add(tire);
-  const rm=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.255,24),rim);rm.rotation.z=Math.PI/2;w.add(rm);
-  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.27,16),dark);hub.rotation.z=Math.PI/2;w.add(hub);
-  w.position.set(x,.35,z);w.children.forEach(o=>{o.castShadow=true;o.receiveShadow=true;});g.add(w);wheels.push(w);
+  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.27,32),rubber);tire.rotation.z=Math.PI/2;w.add(tire);
+  const rm=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.285,24),rim);rm.rotation.z=Math.PI/2;w.add(rm);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.30,16),dark);hub.rotation.z=Math.PI/2;w.add(hub);
+  for(let k=0;k<5;k++){
+   const spoke=new THREE.Mesh(new THREE.BoxGeometry(.035,.025,.30),white);
+   spoke.position.y=Math.sin(k*Math.PI*2/5)*.12;spoke.position.z=Math.cos(k*Math.PI*2/5)*.12;w.add(spoke);
+  }
+  w.position.set(x,.34,z);w.children.forEach(o=>{o.castShadow=true;o.receiveShadow=true;});g.add(w);wheels.push(w);
  }
  const nitroFlames=[];
  for(const x of [-.38,.38]){
-  add(new THREE.CylinderGeometry(.055,.07,.12,12),dark,[x,.48,1.82],null,[Math.PI/2,0,0]);
+  add(new THREE.CylinderGeometry(.055,.07,.12,12),dark,[x,.46,1.82],null,[Math.PI/2,0,0]);
   const flame=new THREE.Mesh(new THREE.ConeGeometry(.08,.48,12),nitroGlowMat);
-  flame.rotation.x=Math.PI/2;flame.position.set(x,.48,2.08);flame.visible=false;g.add(flame);nitroFlames.push(flame);
+  flame.rotation.x=Math.PI/2;flame.position.set(x,.46,2.08);flame.visible=false;g.add(flame);nitroFlames.push(flame);
  }
  g.userData.wheels=wheels;g.userData.nitroFlames=nitroFlames;
  scene.add(g);return g;
@@ -567,19 +585,31 @@ for(let x=-1000,index=0;x<1000;x+=145,index++){
 const crowdShirts=[0xe84b3c,0x287bc1,0xe8c34d,0x3b8a5c,0xf0eee7,0x754ca3].map(color=>mat(color));
 const crowdSkin=[0xb9774f,0x8f5a3b,0xd49a70,0x70462f].map(color=>mat(color));
 function makeSpectator(x,side,index){
+ // Warga bergaya voxel/Minecraft: kepala kotak, torso balok, lengan dan kaki berbentuk kubus.
  const g=new THREE.Group();g.position.set(x,0,side*(17.1+Math.random()*1.5));
- const body=new THREE.Mesh(new THREE.CylinderGeometry(.20,.25,.78,8),crowdShirts[index%crowdShirts.length]);body.position.y=1.0;g.add(body);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),crowdSkin[index%crowdSkin.length]);head.position.y=1.53;g.add(head);
- for(const dx of [-.11,.11]){
-  const leg=new THREE.Mesh(new THREE.CylinderGeometry(.065,.08,.45,7),darkMat);leg.position.set(dx,.32,0);g.add(leg);
+ const shirt=crowdShirts[index%crowdShirts.length],skin=crowdSkin[index%crowdSkin.length];
+ const pants=mat([0x26384b,0x343434,0x66513d,0x273b2c][index%4]);
+ const shoe=mat(0x17191c);
+ const torso=new THREE.Mesh(new THREE.BoxGeometry(.48,.62,.28),shirt);torso.position.y=1.02;g.add(torso);
+ const head=new THREE.Mesh(new THREE.BoxGeometry(.34,.34,.34),skin);head.position.y=1.53;g.add(head);
+ // Rambut kotak dan wajah sederhana menghadap ke arah jalan.
+ const hair=mat([0x29221d,0x3b2920,0x171717,0x563b26][index%4]);
+ const cap=new THREE.Mesh(new THREE.BoxGeometry(.36,.09,.36),hair);cap.position.y=1.74;g.add(cap);
+ const face=mat(0x24201e);
+ for(const ex of [-.085,.085]){
+  const eye=new THREE.Mesh(new THREE.BoxGeometry(.035,.04,.018),face);eye.position.set(ex,1.55,-.178);g.add(eye);
+ }
+ for(const dx of [-.13,.13]){
+  const leg=new THREE.Mesh(new THREE.BoxGeometry(.18,.43,.22),pants);leg.position.set(dx,.49,0);g.add(leg);
+  const foot=new THREE.Mesh(new THREE.BoxGeometry(.19,.12,.30),shoe);foot.position.set(dx,.13,-.035);g.add(foot);
  }
  for(const armSide of [-1,1]){
-  const arm=new THREE.Mesh(new THREE.CylinderGeometry(.05,.065,.43,7),crowdSkin[index%crowdSkin.length]);
-  arm.position.set(armSide*.27,1.05,0);arm.rotation.z=armSide*.35;g.add(arm);
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(.17,.48,.22),shirt);
+  arm.position.set(armSide*.33,1.0,0);arm.rotation.z=armSide*.10;g.add(arm);
  }
  if(index%5===0){
-  const arm=g.children[g.children.length-1];arm.rotation.z=-.9;arm.position.y=1.22;
-  const phone=new THREE.Mesh(new THREE.BoxGeometry(.07,.13,.035),darkMat);phone.position.set(-.44,1.42,0);g.add(phone);
+  const arm=g.children[g.children.length-1];arm.rotation.z=-.82;arm.position.y=1.16;
+  const phone=new THREE.Mesh(new THREE.BoxGeometry(.075,.14,.035),darkMat);phone.position.set(-.47,1.42,-.04);g.add(phone);
  }
  scene.add(g);
 }
