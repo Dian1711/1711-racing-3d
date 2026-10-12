@@ -995,6 +995,11 @@ function drawMinimap(track){
  document.getElementById('mapPath').setAttribute('d','M'+pts.join(' L'));
  updateMinimapDot(track);
 }
+function mapYAtX(x,track){
+ const range=track.mapRange||{min:-130,max:130};
+ const z=routeCenter(x,track);
+ return THREE.MathUtils.clamp(66-(z-range.min)/(range.max-range.min||1)*62,3,67);
+}
 function mapYAtZ(z,track){
  const range=track.mapRange||{min:-130,max:130};
  return THREE.MathUtils.clamp(66-(z-range.min)/(range.max-range.min||1)*62,3,67);
