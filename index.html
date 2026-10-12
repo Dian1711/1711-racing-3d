@@ -816,13 +816,13 @@ let nitro=100,nitroActive=false;
 let running=false,playerFinished=false,raceOver=false,countdownActive=false,countdownValue=0,countdownTimer=0;
 let speed=0,heading=Math.PI/2;
 const trackOptions=[
- {name:'City Grand Tour',distance:7600,sky:0x9bc5df,road:0x343b43,grass:0x5c8749,curve:42,bends:3,scene:'city'},
- {name:'Sunset Canyon',distance:8000,sky:0xf0a16d,road:0x494044,grass:0x8b7146,curve:76,bends:4,scene:'canyon'},
- {name:'Emerald Forest',distance:8400,sky:0x9ac6b0,road:0x303a36,grass:0x426b3e,curve:95,bends:5,scene:'forest'},
- {name:'Desert Serpent',distance:8800,sky:0xe9c58c,road:0x51483e,grass:0xa18b55,curve:115,bends:6,scene:'desert'},
- {name:'Azure Coastline',distance:9200,sky:0x8fd4e8,road:0x3a4650,grass:0x6b9b72,curve:82,bends:5,scene:'coast'},
- {name:'Midnight Mountain',distance:9600,sky:0x111c36,road:0x252a35,grass:0x233d34,curve:132,bends:7,scene:'mountain'},
- {name:'World Grand Prix',distance:10000,sky:0xb9c7e7,road:0x303642,grass:0x507647,curve:108,bends:6,scene:'grandprix'}
+ {name:'City Grand Tour',distance:7600,sky:0x9bc5df,road:0x343b43,grass:0x5c8749,curve:42,bends:3,scene:'city',profile:[[0,0],[.12,0],[.23,34],[.32,34],[.43,-18],[.55,-18],[.68,43],[.78,43],[.9,0],[1,0]]},
+ {name:'Sunset Canyon',distance:8000,sky:0xf0a16d,road:0x494044,grass:0x8b7146,curve:76,bends:4,scene:'canyon',profile:[[0,0],[.10,-20],[.21,-72],[.31,-95],[.42,-24],[.52,48],[.63,96],[.72,58],[.83,-30],[.92,-42],[1,0]]},
+ {name:'Emerald Forest',distance:8400,sky:0x9ac6b0,road:0x303a36,grass:0x426b3e,curve:95,bends:5,scene:'forest',profile:[[0,0],[.09,24],[.18,70],[.28,30],[.38,-45],[.49,-66],[.60,-8],[.70,58],[.80,18],[.91,-35],[1,0]]},
+ {name:'Desert Serpent',distance:8800,sky:0xe9c58c,road:0x51483e,grass:0xa18b55,curve:115,bends:6,scene:'desert',profile:[[0,0],[.08,-35],[.17,48],[.26,94],[.35,24],[.45,-72],[.55,-96],[.64,-8],[.74,88],[.83,44],[.92,-36],[1,0]]},
+ {name:'Azure Coastline',distance:9200,sky:0x8fd4e8,road:0x3a4650,grass:0x6b9b72,curve:82,bends:5,scene:'coast',profile:[[0,0],[.12,12],[.23,58],[.34,76],[.44,18],[.55,-48],[.66,-62],[.77,-10],[.87,46],[.94,30],[1,0]]},
+ {name:'Midnight Mountain',distance:9600,sky:0x111c36,road:0x252a35,grass:0x233d34,curve:132,bends:7,scene:'mountain',profile:[[0,0],[.07,38],[.15,108],[.23,70],[.31,-20],[.39,-108],[.48,-65],[.57,28],[.66,118],[.75,82],[.84,-8],[.93,-62],[1,0]]},
+ {name:'World Grand Prix',distance:10000,sky:0xb9c7e7,road:0x303642,grass:0x507647,curve:108,bends:6,scene:'grandprix',profile:[[0,0],[.14,0],[.22,52],[.31,82],[.40,32],[.49,-38],[.58,-72],[.68,-22],[.77,46],[.86,46],[.93,0],[1,0]]}
 ];
 let selectedTrack=0;
 const START_LINE_X=-900;
@@ -972,8 +972,17 @@ let generatedTrackGroup=null;
 let legacyWorldHidden=false;
 function routeCenter(x,track=trackOptions[selectedTrack]){
  const s=THREE.MathUtils.clamp((x-START_LINE_X)/track.distance,0,1);
- const fade=Math.sin(Math.PI*s);
- return fade*track.curve*(Math.sin(s*Math.PI*track.bends)+.24*Math.sin(s*Math.PI*(track.bends*2+1)));
+ const points=track.profile;
+ let i=0;
+ while(i<points.length-2&&s>points[i+1][0])i++;
+ const p0=points[i],p1=points[i+1];
+ const prev=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+2)];
+ const span=p1[0]-p0[0];
+ const t=span>0?(s-p0[0])/span:0;
+ const m0=(p1[1]-prev[1])/(p1[0]-prev[0]||1);
+ const m1=(next[1]-p0[1])/(next[0]-p0[0]||1);
+ const t2=t*t,t3=t2*t;
+ return (2*t3-3*t2+1)*p0[1]+(t3-2*t2+t)*span*m0+(-2*t3+3*t2)*p1[1]+(t3-t2)*span*m1;
 }
 function routeSlope(x,track=trackOptions[selectedTrack]){
  const d=2, a=routeCenter(x-d,track), b=routeCenter(x+d,track);
@@ -994,6 +1003,22 @@ function buildTrackWorld(track){
  const add=(mesh)=>{mesh.receiveShadow=true;generatedTrackGroup.add(mesh);return mesh;};
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(track.distance+1400,1100),new THREE.MeshStandardMaterial({color:track.grass,roughness:1}));
  ground.rotation.x=-Math.PI/2;ground.position.set(START_LINE_X+track.distance/2,-.34,0);add(ground);
+ // Laut nyata untuk Azure Coastline: panel-panel menyambung mengikuti sisi lintasan,
+ // dengan jarak dari aspal agar permukaan air tidak menutupi jalan.
+ if(track.scene==='coast'){
+  const oceanMat=new THREE.MeshStandardMaterial({color:0x168fbd,roughness:.28,metalness:.12});
+  const foamMat=new THREE.MeshStandardMaterial({color:0x9be5ef,roughness:.55});
+  for(let i=0;i<Math.ceil(track.distance/150);i++){
+   const x=START_LINE_X+i*150+75,z=routeCenter(x,track),slope=routeSlope(x,track);
+   const norm=Math.sqrt(1+slope*slope),nx=-slope/norm,nz=1/norm,yaw=-Math.atan(slope);
+   const sea=new THREE.Mesh(new THREE.BoxGeometry(172,.12,158),oceanMat);
+   sea.position.set(x+nx*1*158,-.30,z+nz*1*158);sea.rotation.y=yaw;add(sea);
+   if(i%3===0){
+    const foam=new THREE.Mesh(new THREE.BoxGeometry(165,.025,.55),foamMat);
+    foam.position.set(x+nx*1*82,-.22,z+nz*1*82);foam.rotation.y=yaw;add(foam);
+   }
+  }
+ }
  const roadMaterial=new THREE.MeshStandardMaterial({color:track.road,roughness:.95});
  const edgeMaterial=new THREE.MeshStandardMaterial({color:0xf2f0e8,roughness:.7});
  const curbRed=new THREE.MeshStandardMaterial({color:0xe84232});
