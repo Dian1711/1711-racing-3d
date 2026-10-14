@@ -1683,20 +1683,20 @@ function updatePlayer(dt){
 
  const steering=(keys.right?1:0)-(keys.left?1:0);
  const speedFraction=Math.min(1,Math.abs(speed)/MAX_SPEED);
- // Input setir halus, tetapi harus benar-benar memindahkan mobil ke kiri/kanan.
- const steeringSmooth=1-Math.exp(-dt*10);
+ const steeringSmooth=1-Math.exp(-dt*12);
  steeringInput+=(steering-steeringInput)*steeringSmooth;
  const currentTrack=trackOptions[selectedTrack];
  const roadCenter=routeCenter(player.position.x,currentTrack);
- // Trek mode ini memanjang pada sumbu X: laju maju tetap di X, setir mengubah posisi lateral Z.
+ // Forward movement follows X; steering now produces a clearer lateral lane change.
  player.position.x+=speed*dt;
- const lateralStep=steeringInput*speedFraction*dt*9.5;
+ const steerFactor=Math.min(1,Math.abs(speed)/(MAX_SPEED*.24));
+ const lateralStep=steeringInput*steerFactor*dt*17;
  const laneOffset=THREE.MathUtils.clamp(player.position.z-roadCenter+lateralStep,-10.2,10.2);
  player.position.z=routeCenter(player.position.x,currentTrack)+laneOffset;
- // Hidung mobil hanya mengarah sedikit ke tikungan, bukan berputar menyamping seperti drifting.
- const targetHeading=Math.PI/2-steeringInput*0.20;
- heading+=angleDifference(targetHeading,heading)*Math.min(1,dt*7);
- // Kunci bodi rata; hanya yaw kecil mengikuti arah setir.
+ // Match the road bend and keep the car body level instead of looking like it is drifting.
+ const roadHeading=Math.atan2(1,routeSlope(player.position.x,currentTrack));
+ const targetHeading=roadHeading-steeringInput*0.12;
+ heading+=angleDifference(targetHeading,heading)*Math.min(1,dt*9);
  player.rotation.set(0,heading+Math.PI,0,'YXZ');
  // Putaran roda dibuat terbaca, tidak terlalu cepat hingga terlihat seperti roda polos.
  const wheelSpin=speed*dt*.42;
